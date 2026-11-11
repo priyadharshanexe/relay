@@ -17,8 +17,8 @@ x-app: &app
     RELAY_LOG_LEVEL: INFO
     RELAY_LOG_JSON: "true"
   depends_on:
-    postgres:
-      condition: service_healthy
+    migrate:
+      condition: service_completed_successfully
     redis:
       condition: service_healthy
 
@@ -50,6 +50,18 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+  # Applies database migrations, then exits. The API and worker start only
+  # after it has finished successfully, so they never see a half-built schema.
+  migrate:
+    <<: *app
+    command: ["python", "-m", "relay.db.migrate"]
+    restart: "no"
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   api:
     <<: *app
