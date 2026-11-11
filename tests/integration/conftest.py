@@ -12,13 +12,14 @@ from concurrent.futures import ThreadPoolExecutor
 import asyncpg
 import pytest
 from alembic import command
+from redis.asyncio import Redis
 from sqlalchemy import make_url, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from relay.db.migrate import alembic_config
 from relay.db.models import Base
-from tests.conftest import TEST_DATABASE_URL
+from tests.conftest import TEST_DATABASE_URL, TEST_REDIS_URL
 
 
 def run_in_thread[T](fn: Callable[[], T]) -> T:
@@ -63,10 +64,21 @@ async def engine() -> AsyncIterator[AsyncEngine]:
     try:
         yield engine
     finally:
-        tables = ", ".join(table.name for table in Base.metadata.sorted_tables)
-        async with engine.begin() as connection:
-            await connection.execute(text(f"TRUNCATE {tables} CASCADE"))
         await engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+async def clean_state(engine: AsyncEngine) -> AsyncIterator[None]:
+    """Empty every table and the test Redis database after each test."""
+    yield
+    tables = ", ".join(table.name for table in Base.metadata.sorted_tables)
+    async with engine.begin() as connection:
+        await connection.execute(text(f"TRUNCATE {tables} CASCADE"))
+    redis = Redis.from_url(TEST_REDIS_URL)
+    try:
+        await redis.flushdb()
+    finally:
+        await redis.aclose()
 
 
 @pytest.fixture
