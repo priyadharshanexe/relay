@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import APIRouter, FastAPI
 
 from relay import __version__
-from relay.api import api_keys, auth, endpoints, events, health, orgs
+from relay.api import api_keys, auth, deliveries, endpoints, events, health, orgs
 from relay.core.config import Settings, get_settings
 from relay.core.crypto import SecretBox
 from relay.core.errors import register_exception_handlers
@@ -60,5 +60,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(api_keys.router)
     v1.include_router(endpoints.router)
     v1.include_router(events.router)
+    v1.include_router(deliveries.router)
     app.include_router(v1)
     return app

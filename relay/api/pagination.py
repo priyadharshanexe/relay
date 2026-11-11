@@ -48,7 +48,7 @@ def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
         raise AppError(400, "invalid_cursor", "The cursor is not valid.") from exc
 
 
-def newest_first[S: Select[Any]](
+def newest_first[S: Select[*tuple[Any, ...]]](
     query: S,
     created_at: InstrumentedAttribute[datetime],
     row_id: InstrumentedAttribute[uuid.UUID],
