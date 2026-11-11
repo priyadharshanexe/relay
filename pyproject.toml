@@ -19,10 +19,12 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
+    "hypothesis>=6.170.15",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.4.1.post1",
     "ruff>=0.17.4",
+    "standardwebhooks>=1.1.0",
 ]
 
 [build-system]
