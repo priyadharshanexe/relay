@@ -65,6 +65,19 @@ class Settings(BaseSettings):
 
     # Worker
     worker_poll_interval_seconds: float = Field(default=1.0, gt=0, le=60)
+    worker_batch_size: int = Field(default=50, ge=1, le=500)
+    # How many deliveries one worker sends at the same time.
+    worker_concurrency: int = Field(default=20, ge=1, le=200)
+    # A claim is a lease. It must comfortably exceed the delivery timeout, so a
+    # healthy worker always finishes before its lease runs out.
+    worker_lock_seconds: int = Field(default=60, ge=5, le=600)
+
+    # Outbound delivery
+    delivery_connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
+    delivery_total_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
+    delivery_response_snippet_bytes: int = Field(default=2048, ge=0, le=65536)
+    breaker_failure_threshold: int = Field(default=5, ge=1)
+    breaker_cooldown_seconds: int = Field(default=60, ge=1)
 
     @property
     def cookies_are_secure(self) -> bool:
