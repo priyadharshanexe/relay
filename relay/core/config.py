@@ -59,6 +59,17 @@ class Settings(BaseSettings):
     # How long the old signing secret keeps working after a rotation.
     secret_rotation_overlap_hours: int = Field(default=24, ge=0, le=168)
 
+    # Built-in test receiver
+    # The API's address as the *workers* reach it. Endpoint URLs that start with
+    # "<this>/receiver/" are our own receiver and are always deliverable.
+    receiver_base_url: str = "http://localhost:8000"
+    # Public demo safety: when on, deliveries go ONLY to the built-in receiver, so
+    # nobody can use a public demo to send requests to arbitrary servers.
+    delivery_only_to_receiver: bool = False
+    # How long a "timeout" receiver holds the connection. None = just past the
+    # delivery timeout.
+    receiver_hold_seconds: float | None = Field(default=None, gt=0, le=120)
+
     # Abuse limits, per client IP
     login_attempts_per_minute: int = Field(default=10, ge=1)
     registrations_per_hour: int = Field(default=10, ge=1)
@@ -84,6 +95,16 @@ class Settings(BaseSettings):
         if self.cookie_secure is not None:
             return self.cookie_secure
         return self.environment == "production"
+
+    @property
+    def receiver_url_prefix(self) -> str:
+        return self.receiver_base_url.rstrip("/") + "/receiver/"
+
+    @property
+    def receiver_hold(self) -> float:
+        if self.receiver_hold_seconds is not None:
+            return self.receiver_hold_seconds
+        return self.delivery_total_timeout_seconds + 5
 
     @property
     def endpoints_must_use_https(self) -> bool:

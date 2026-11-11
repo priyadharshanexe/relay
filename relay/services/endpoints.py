@@ -17,6 +17,7 @@ from relay.domain import signing
 from relay.domain.enums import BreakerState, EndpointStatus
 from relay.domain.ssrf import AddressPolicy, SsrfError, parse_target
 from relay.services import audit
+from relay.services.receivers import is_builtin_receiver_url
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,6 +34,14 @@ def validate_url(url: str, settings: Settings) -> None:
     are resolved and checked again by the worker on every delivery, because DNS
     can change after the endpoint is saved.
     """
+    if is_builtin_receiver_url(url, settings.receiver_url_prefix):
+        return  # our own test receiver: always allowed
+    if settings.delivery_only_to_receiver:
+        raise AppError(
+            422,
+            "invalid_endpoint_url",
+            "This is a demo: endpoints can only point at a built-in test receiver.",
+        )
     try:
         target = parse_target(url, require_https=settings.endpoints_must_use_https)
         try:

@@ -2,7 +2,7 @@
 
 Reliable, signed webhook delivery: a transactional outbox, retries with backoff, a dead-letter queue and replay.
 
-> **Status:** under active development. The backend pipeline works end to end: ingestion, signed delivery, retries with backoff, circuit breaker, rate limiting, dead-letter queue and replay. The dashboard is next.
+> **Status:** under active development. The backend pipeline works end to end: ingestion, signed delivery, retries with backoff, circuit breaker, rate limiting, dead-letter queue and replay, plus a built-in test receiver for trying every failure mode. The dashboard is next.
 > The full README (architecture diagram, guarantees, demo) arrives with the first release.
 
 ## Quick start

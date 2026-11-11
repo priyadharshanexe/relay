@@ -46,6 +46,8 @@ log = get_logger("relay.worker.deliver")
 
 USER_AGENT = f"Relay/{__version__} (+webhook delivery)"
 
+_TRUST_ALL = AddressPolicy(allow_private_networks=True)
+
 # If another worker already started the probe, look again shortly.
 _PROBE_RACE_DELAY = timedelta(seconds=5)
 
@@ -106,8 +108,15 @@ class DeliveryProcessor:
         breaker: CircuitBreaker,
         rate_limiter: RateLimiter,
         worker_id: str,
+        trusted_url_prefix: str | None = None,
+        only_trusted: bool = False,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
+        # URLs under trusted_url_prefix are our own built-in receiver: they live
+        # on our network on purpose, so the address policy does not apply.
+        # only_trusted (public demo mode) refuses every other destination.
+        self._trusted_url_prefix = trusted_url_prefix
+        self._only_trusted = only_trusted
         self._sessions = sessions
         self._sender = sender
         self._resolver = resolver
@@ -237,9 +246,19 @@ class DeliveryProcessor:
             )
         headers |= Signer(job.secrets).sign(job.message_id, started_at, job.body).as_dict()
 
+        trusted = self._trusted_url_prefix is not None and job.url.startswith(
+            self._trusted_url_prefix
+        )
+        if self._only_trusted and not trusted:
+            return headers, SendResult(
+                0,
+                error_kind=ErrorKind.SSRF_BLOCKED,
+                error_message="demo mode: deliveries only go to the built-in test receiver",
+            )
+        policy = _TRUST_ALL if trusted else self._address_policy
         try:
             target = await resolve_and_check(
-                job.url, self._address_policy, self._resolver, require_https=self._require_https
+                job.url, policy, self._resolver, require_https=self._require_https and not trusted
             )
         except UnresolvableHostError as exc:
             return headers, SendResult(0, error_kind=ErrorKind.DNS, error_message=str(exc))

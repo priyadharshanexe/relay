@@ -47,6 +47,8 @@ def build_processor(
         ),
         rate_limiter=rate_limiter,
         worker_id=worker_id,
+        trusted_url_prefix=settings.receiver_url_prefix,
+        only_trusted=settings.delivery_only_to_receiver,
     )
 
 

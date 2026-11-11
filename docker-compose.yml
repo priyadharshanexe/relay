@@ -19,6 +19,8 @@ x-app: &app
     # Development only: lets you point endpoints at receivers on your own machine
     # or on this Docker network over plain http. Production refuses this setting.
     RELAY_ENDPOINTS_ALLOW_PRIVATE_NETWORKS: "true"
+    # How the worker reaches the API's built-in test receiver on this network.
+    RELAY_RECEIVER_BASE_URL: http://api:8000
   depends_on:
     migrate:
       condition: service_completed_successfully

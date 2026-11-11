@@ -68,6 +68,8 @@ class Pipeline:
         resolver: Resolver = system_resolver,
         allow_private: bool = True,
         timeout: float = 1.0,
+        trusted_url_prefix: str | None = None,
+        only_trusted: bool = False,
     ) -> DeliveryProcessor:
         sender = Sender(connect_timeout=timeout, total_timeout=timeout, snippet_bytes=64)
         self._senders.append(sender)
@@ -84,6 +86,8 @@ class Pipeline:
             ),
             rate_limiter=RedisRateLimiter(self._redis),
             worker_id=worker_id,
+            trusted_url_prefix=trusted_url_prefix,
+            only_trusted=only_trusted,
         )
 
     async def tick(
@@ -794,3 +798,52 @@ async def test_see_failure_then_replay_then_success(
     # ...but the whole history is still there.
     assert [a["status_code"] for a in detail["attempt_log"]] == [500, 500, 200]
     assert detail["payload"] == {"order_id": 42}
+
+
+# ------------------------------------------------- built-in receiver, demo mode
+async def test_the_built_in_receiver_is_reachable_even_under_the_strict_policy(
+    org: Org, receiver: FakeReceiver, pipeline: Pipeline, session: AsyncSession
+) -> None:
+    """Our own receiver lives on a private address on purpose."""
+    await org.endpoint(receiver.url("/receiver/some-token"))
+    await org.emit()
+
+    await pipeline.tick(
+        pipeline.processor(allow_private=False, trusted_url_prefix=receiver.url("/receiver/"))
+    )
+
+    assert [r.path for r in receiver.requests] == ["/receiver/some-token"]
+    assert (await only_delivery(session)).status == "succeeded"
+
+
+async def test_the_trust_does_not_extend_to_other_paths_on_the_same_host(
+    org: Org, receiver: FakeReceiver, pipeline: Pipeline, session: AsyncSession
+) -> None:
+    await org.endpoint(receiver.url("/internal-admin"))
+    await org.emit()
+
+    await pipeline.tick(
+        pipeline.processor(allow_private=False, trusted_url_prefix=receiver.url("/receiver/"))
+    )
+
+    assert receiver.requests == []
+    (attempt,) = await attempts(session)
+    assert attempt.error_kind == "ssrf_blocked"
+
+
+async def test_demo_mode_delivers_only_to_the_built_in_receiver(
+    org: Org, receiver: FakeReceiver, pipeline: Pipeline, session: AsyncSession
+) -> None:
+    await org.endpoint(receiver.url("/receiver/demo-token"), event_types=["to.receiver"])
+    await org.endpoint(receiver.url("/somewhere-else"), event_types=["to.elsewhere"])
+    await org.emit("to.receiver")
+    await org.emit("to.elsewhere")
+
+    await pipeline.tick(
+        pipeline.processor(trusted_url_prefix=receiver.url("/receiver/"), only_trusted=True)
+    )
+
+    assert [r.path for r in receiver.requests] == ["/receiver/demo-token"]
+    blocked = [d for d in await deliveries(session) if d.status != "succeeded"]
+    assert len(blocked) == 1
+    assert "demo mode" in (blocked[0].last_error or "")
