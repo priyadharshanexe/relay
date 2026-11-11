@@ -2,7 +2,7 @@
 
 Reliable, signed webhook delivery: a transactional outbox, retries with backoff, a dead-letter queue and replay.
 
-> **Status:** under active development. Phase 1 (foundation) is done; the delivery pipeline is next.
+> **Status:** under active development. The foundation and the database schema are done; the delivery pipeline is next.
 > The full README (architecture diagram, guarantees, demo) arrives with the first release.
 
 ## Quick start
@@ -40,6 +40,19 @@ uv run ruff check . && uv run ruff format --check .   # lint and format
 uv run mypy                              # type check (strict)
 ```
 
+The tests build their own `relay_test` database from the migrations on every run, so they never touch your development data.
+
+### Database migrations
+
+`docker compose up` applies migrations automatically before the API and worker start. To work with them by hand:
+
+```bash
+uv run alembic upgrade head                               # apply
+uv run alembic revision --autogenerate -m "describe it"   # create one after changing relay/db/models.py
+```
+
+A test fails if the models and the migrations ever disagree.
+
 Run the API or worker on your machine instead of in Docker (copy `.env.example` to `.env` first):
 
 ```bash
@@ -53,7 +66,7 @@ uv run python -m relay.worker
 relay/
   api/       HTTP routes (health so far)
   core/      settings, logging, error handling, request-id middleware
-  db/        database engine and sessions
+  db/        models, migrations, engine and sessions
   domain/    pure business logic, with no web, database or network imports
   services/  use cases that combine domain logic with I/O
   worker/    the delivery worker and its lifecycle

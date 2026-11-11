@@ -10,9 +10,10 @@ from relay.core.config import Settings
 from relay.main import create_app
 
 # Locally these come from `docker compose up -d postgres redis`; in CI from the
-# workflow's service containers. Redis db 15 keeps test data away from dev data.
+# workflow's service containers. Tests use their own database (relay_test, rebuilt
+# from the migrations on every run) and Redis db 15, so dev data is never touched.
 TEST_DATABASE_URL = os.environ.get(
-    "RELAY_TEST_DATABASE_URL", "postgresql+asyncpg://relay:relay@localhost:5433/relay"
+    "RELAY_TEST_DATABASE_URL", "postgresql+asyncpg://relay:relay@localhost:5433/relay_test"
 )
 TEST_REDIS_URL = os.environ.get("RELAY_TEST_REDIS_URL", "redis://localhost:6379/15")
 
