@@ -16,6 +16,9 @@ x-app: &app
     RELAY_REDIS_URL: redis://redis:6379/0
     RELAY_LOG_LEVEL: INFO
     RELAY_LOG_JSON: "true"
+    # Development only: lets you point endpoints at receivers on your own machine
+    # or on this Docker network over plain http. Production refuses this setting.
+    RELAY_ENDPOINTS_ALLOW_PRIVATE_NETWORKS: "true"
   depends_on:
     migrate:
       condition: service_completed_successfully
