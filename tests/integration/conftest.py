@@ -12,6 +12,8 @@ from concurrent.futures import ThreadPoolExecutor
 import asyncpg
 import pytest
 from alembic import command
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from redis.asyncio import Redis
 from sqlalchemy import make_url, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
@@ -85,3 +87,10 @@ async def clean_state(engine: AsyncEngine) -> AsyncIterator[None]:
 async def session(engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
     async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
+
+
+@pytest.fixture
+async def other_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
+    """A second browser (or a machine) talking to the same app as ``client``."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client

@@ -1,10 +1,9 @@
 import uuid
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,12 +13,6 @@ from relay.db.models import ApiKey, AuditLog
 from tests.integration.helpers import add_member, register
 
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture
-async def other_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        yield client
 
 
 @pytest.fixture

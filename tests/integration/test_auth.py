@@ -1,10 +1,9 @@
+import base64
 import uuid
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
-from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,13 +16,6 @@ from tests.conftest import make_settings
 from tests.integration.helpers import PASSWORD, login, register, set_cookie_headers
 
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture
-async def other_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
-    """A second browser talking to the same app (the first is ``client``)."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        yield client
 
 
 # --------------------------------------------------------------------- register
@@ -75,7 +67,13 @@ async def test_session_cookies_are_httponly_and_refresh_is_scoped(client: AsyncC
 
 
 async def test_cookies_are_marked_secure_in_production() -> None:
-    app = create_app(make_settings(environment="production", jwt_secret="x" * 40))
+    app = create_app(
+        make_settings(
+            environment="production",
+            jwt_secret="x" * 40,
+            encryption_key=base64.b64encode(b"p" * 32).decode(),
+        )
+    )
     async with (
         app.router.lifespan_context(app),
         AsyncClient(transport=ASGITransport(app=app), base_url="https://test") as client,
