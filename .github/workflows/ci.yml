@@ -74,5 +74,16 @@ jobs:
         with:
           context: .
           push: false
+          load: true
+          tags: relay:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Image contains exactly the current source
+        run: |
+          find relay -name '*.py' | LC_ALL=C sort > repo.txt
+          docker run --rm --entrypoint python relay:ci -c "
+          import pathlib, relay
+          root = pathlib.Path(relay.__file__).parent
+          print('\n'.join(sorted(p.relative_to(root.parent).as_posix() for p in root.rglob('*.py'))))
+          " > image.txt
+          diff repo.txt image.txt

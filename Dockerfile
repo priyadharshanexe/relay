@@ -21,7 +21,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY README.md ./
 COPY relay ./relay
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv sync --frozen --no-dev --no-editable --reinstall-package relay
+# --reinstall-package: uv caches the built package and only rebuilds it when
+# pyproject.toml changes. Without this flag a source-only change would ship the
+# previously cached build, i.e. stale code.
 
 
 # ---- runtime stage: just Python and the virtualenv, running as non-root -----
