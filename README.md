@@ -2,7 +2,7 @@
 
 Reliable, signed webhook delivery: a transactional outbox, retries with backoff, a dead-letter queue and replay.
 
-> **Status:** under active development. The foundation and the database schema are done; the delivery pipeline is next.
+> **Status:** under active development. Done so far: foundation, database schema, domain logic (signing, backoff, circuit breaker, SSRF guard), accounts and API keys. The delivery pipeline is next.
 > The full README (architecture diagram, guarantees, demo) arrives with the first release.
 
 ## Quick start
@@ -64,8 +64,8 @@ uv run python -m relay.worker
 
 ```
 relay/
-  api/       HTTP routes (health so far)
-  core/      settings, logging, error handling, request-id middleware
+  api/       HTTP routes (auth, organisations, API keys, health)
+  core/      settings, logging, errors, security (hashing, tokens), middleware
   db/        models, migrations, engine and sessions
   domain/    pure business logic, with no web, database or network imports
   services/  use cases that combine domain logic with I/O

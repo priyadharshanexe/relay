@@ -6,10 +6,10 @@ Run with: ``uvicorn --factory relay.main:create_app``
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
 from relay import __version__
-from relay.api import health
+from relay.api import api_keys, auth, health, orgs
 from relay.core.config import Settings, get_settings
 from relay.core.errors import register_exception_handlers
 from relay.core.logging import configure_logging, get_logger
@@ -49,4 +49,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_exception_handlers(app)
     app.add_middleware(RequestContextMiddleware)
     app.include_router(health.router)
+
+    v1 = APIRouter(prefix="/v1")
+    v1.include_router(auth.router)
+    v1.include_router(orgs.router)
+    v1.include_router(api_keys.router)
+    app.include_router(v1)
     return app
