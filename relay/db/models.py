@@ -118,6 +118,26 @@ class ApiKey(Base):
     created_at: Mapped[CreatedAt]
 
 
+class RefreshToken(Base):
+    """A dashboard session's refresh token. Only its hash is stored.
+
+    Tokens rotate: each one can be exchanged once for a new token in the same
+    ``family``. If a token that was already used shows up again, it has been
+    stolen (or replayed), and the whole family is revoked.
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[UuidPk]
+    user_id: Mapped[uuid.UUID] = mapped_column(_fk("users.id"), index=True)
+    family_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime]
+    used_at: Mapped[datetime | None]
+    revoked_at: Mapped[datetime | None]
+    created_at: Mapped[CreatedAt]
+
+
 # ------------------------------------------------------------------- endpoints
 class Endpoint(Base):
     __tablename__ = "endpoints"
