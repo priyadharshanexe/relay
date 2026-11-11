@@ -1,0 +1,10 @@
+# Secret-scanning configuration (https://github.com/gitleaks/gitleaks).
+# Every default rule stays on; this file only documents known false positives.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Idempotency keys are request identifiers, not credentials"
+regexTarget = "line"
+regexes = ['''idempotency_key=["']''']

@@ -1,5 +1,7 @@
 """Application settings, read from environment variables prefixed with ``RELAY_``."""
 
+import base64
+import hashlib
 from functools import lru_cache
 from typing import Literal
 
@@ -11,8 +13,11 @@ LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
 # Only for local development and tests. Production refuses to start with it.
 DEV_JWT_SECRET = "dev-only-jwt-secret-change-me-in-production"  # noqa: S105
-# base64 of 32 bytes ("relay-dev-encryption-key-32bytes"). Also refused in production.
-DEV_ENCRYPTION_KEY = "cmVsYXktZGV2LWVuY3J5cHRpb24ta2V5LTMyYnl0ZXM="
+# Derived from a public phrase rather than written out, so nobody mistakes it for
+# a real key (and secret scanners don't either). Also refused in production.
+DEV_ENCRYPTION_KEY = base64.b64encode(
+    hashlib.sha256(b"relay development-only encryption key").digest()
+).decode()
 
 
 class Settings(BaseSettings):

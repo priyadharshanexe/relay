@@ -1,0 +1,4 @@
+# An earlier commit wrote the development-only default encryption key as a
+# literal. It never protected real data: production refuses to start with it
+# (see Settings._production_needs_real_secrets), and it is now derived in code.
+a046c6974db10ad46fa13285f85622f4adfafcbe:relay/core/config.py:generic-api-key:15
