@@ -30,7 +30,14 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from relay.domain.enums import BreakerState, DeliveryStatus, EndpointStatus, ErrorKind, Role
+from relay.domain.enums import (
+    BreakerState,
+    DeliveryStatus,
+    EndpointStatus,
+    ErrorKind,
+    ReceiverMode,
+    Role,
+)
 
 # Explicit constraint names make migrations deterministic and errors readable.
 NAMING_CONVENTION = {
@@ -280,6 +287,37 @@ class Attempt(Base):
         CheckConstraint("attempt_number >= 1", name="attempt_number_positive"),
         CheckConstraint("duration_ms >= 0", name="duration_non_negative"),
         Index("ix_attempts_delivery_id_started_at", "delivery_id", "started_at"),
+    )
+
+
+class TestReceiver(Base):
+    """A built-in fake customer server, for demos and for trying things out.
+
+    Anything POSTed to ``/receiver/{token}`` is answered the way this row says:
+    succeed, fail, rate-limit, respond slowly or never respond.
+    """
+
+    __tablename__ = "test_receivers"
+    __test__ = False  # the name starts with "Test", but this is not a pytest class
+
+    id: Mapped[UuidPk]
+    org_id: Mapped[uuid.UUID] = mapped_column(_fk("organizations.id"), index=True)
+    # Unguessable and part of the URL; knowing it is what lets you post to it.
+    token: Mapped[str] = mapped_column(String(64), unique=True)
+    name: Mapped[str] = mapped_column(String(200))
+    mode: Mapped[str] = mapped_column(String(20), server_default=ReceiverMode.OK)
+    status_code: Mapped[int] = mapped_column(server_default="500")
+    delay_ms: Mapped[int] = mapped_column(server_default="2000")
+    retry_after_seconds: Mapped[int] = mapped_column(server_default="30")
+    requests_received: Mapped[int] = mapped_column(server_default="0")
+    last_received_at: Mapped[datetime | None]
+    created_at: Mapped[CreatedAt]
+
+    __table_args__ = (
+        CheckConstraint(_one_of("mode", ReceiverMode), name="mode_valid"),
+        CheckConstraint("status_code BETWEEN 400 AND 599", name="status_code_is_an_error"),
+        CheckConstraint("delay_ms BETWEEN 0 AND 30000", name="delay_bounded"),
+        CheckConstraint("retry_after_seconds BETWEEN 0 AND 86400", name="retry_after_bounded"),
     )
 
 

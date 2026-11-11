@@ -41,3 +41,13 @@ class ErrorKind(StrEnum):
     HTTP_STATUS = "http_status"
     SSRF_BLOCKED = "ssrf_blocked"
     OTHER = "other"
+
+
+class ReceiverMode(StrEnum):
+    """How a built-in test receiver answers."""
+
+    OK = "ok"  # 200
+    ERROR = "error"  # the configured status code (default 500)
+    RATE_LIMIT = "rate_limit"  # 429 with Retry-After
+    SLOW = "slow"  # waits delay_ms, then 200
+    TIMEOUT = "timeout"  # holds the connection until the sender gives up
