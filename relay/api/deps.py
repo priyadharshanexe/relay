@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from relay.core import security
 from relay.core.config import Settings
+from relay.core.crypto import SecretBox
 from relay.core.errors import AppError
 from relay.db.models import Membership, User
 from relay.domain.enums import Role
@@ -53,6 +54,10 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
         yield session
 
 
+def get_secret_box(request: Request) -> SecretBox:
+    return cast(SecretBox, request.app.state.secret_box)
+
+
 def utc_now() -> datetime:
     return datetime.now(UTC)
 
@@ -60,6 +65,7 @@ def utc_now() -> datetime:
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 RedisDep = Annotated[Redis, Depends(get_redis)]
+SecretBoxDep = Annotated[SecretBox, Depends(get_secret_box)]
 
 
 # ------------------------------------------------------------------------- CSRF
