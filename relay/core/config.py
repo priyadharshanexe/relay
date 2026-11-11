@@ -3,11 +3,14 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["development", "test", "production"]
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
+
+# Only for local development and tests. Production refuses to start with it.
+DEV_JWT_SECRET = "dev-only-jwt-secret-change-me-in-production"  # noqa: S105
 
 
 class Settings(BaseSettings):
@@ -29,8 +32,38 @@ class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
     log_json: bool = True
 
+    # Dashboard sessions
+    jwt_secret: SecretStr = SecretStr(DEV_JWT_SECRET)
+    access_token_ttl_seconds: int = Field(default=900, ge=60, le=3600)
+    refresh_token_ttl_days: int = Field(default=30, ge=1, le=90)
+    # None means "secure cookies in production, plain in development and tests".
+    cookie_secure: bool | None = None
+    # Browser origins allowed to call the API with cookies (JSON list in the env var).
+    allowed_origins: list[str] = ["http://localhost:5173", "http://localhost:8000"]
+
+    # Abuse limits, per client IP
+    login_attempts_per_minute: int = Field(default=10, ge=1)
+    registrations_per_hour: int = Field(default=10, ge=1)
+
     # Worker
     worker_poll_interval_seconds: float = Field(default=1.0, gt=0, le=60)
+
+    @property
+    def cookies_are_secure(self) -> bool:
+        if self.cookie_secure is not None:
+            return self.cookie_secure
+        return self.environment == "production"
+
+    @model_validator(mode="after")
+    def _production_needs_real_secrets(self) -> "Settings":
+        if self.environment == "production":
+            secret = self.jwt_secret.get_secret_value()
+            if secret == DEV_JWT_SECRET or len(secret) < 32:
+                raise ValueError(
+                    "RELAY_JWT_SECRET must be set to a random value of at least "
+                    "32 characters in production"
+                )
+        return self
 
 
 @lru_cache
