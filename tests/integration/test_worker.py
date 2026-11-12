@@ -806,6 +806,8 @@ async def test_see_failure_then_replay_then_success(
     assert detail["attempts"] == 1  # a replay starts a fresh schedule
     # ...but the whole history is still there.
     assert [a["status_code"] for a in detail["attempt_log"]] == [500, 500, 200]
+    # Attempt numbers keep counting across the replay: never two "attempt 1"s.
+    assert [a["attempt_number"] for a in detail["attempt_log"]] == [1, 2, 3]
     assert detail["payload"] == {"order_id": 42}
 
 

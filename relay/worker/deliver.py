@@ -20,7 +20,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 from redis.exceptions import RedisError
-from sqlalchemy import CursorResult, select, text, update
+from sqlalchemy import CursorResult, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay import __version__
@@ -209,10 +209,18 @@ class DeliveryProcessor:
                 log.error("deliver.secret_undecryptable", endpoint_id=str(endpoint.id))
                 secrets = []
 
+            # Numbered over the delivery's whole life. `delivery.attempts` restarts
+            # when a delivery is replayed (it drives the retry schedule), but the
+            # log must never show two different "attempt 1" entries.
+            attempts_so_far = await session.scalar(
+                select(func.count()).select_from(Attempt).where(Attempt.delivery_id == delivery.id)
+            )
+            attempts_so_far = int(attempts_so_far or 0)
+
             return _Job(
                 delivery_id=delivery.id,
                 endpoint_id=endpoint.id,
-                attempt_number=delivery.attempts + 1,
+                attempt_number=attempts_so_far + 1,
                 url=endpoint.url,
                 body=build_body(event.id, event.type, event.created_at, event.payload),
                 message_id=str(event.id),
