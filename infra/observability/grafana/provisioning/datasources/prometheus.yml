@@ -1,0 +1,10 @@
+# Tells Grafana where Prometheus is, so nobody has to click it together.
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: relay-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

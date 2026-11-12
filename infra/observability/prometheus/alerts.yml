@@ -1,0 +1,47 @@
+# Alert rules. Each alert names its runbook: the page that tells whoever is
+# on call what the alert means and what to do about it.
+groups:
+  - name: relay
+    rules:
+      # Workers are not keeping up (or are not running): a delivery that could be
+      # sent right now has been waiting more than 5 minutes, and that has been
+      # true for 10 minutes. Customers are getting their webhooks late.
+      - alert: RelayQueueLagging
+        expr: max(relay_oldest_pending_age_seconds) > 300
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: "Webhook deliveries are running {{ $value | humanizeDuration }} late"
+          description: >-
+            The most overdue deliverable delivery has been waiting
+            {{ $value | humanizeDuration }}. Workers are not keeping up with the queue,
+            or are not running.
+          runbook: docs/runbooks/queue-lag.md
+
+      # At least one endpoint has had its circuit breaker open for 15 minutes:
+      # a customer's server has been rejecting or dropping webhooks for a while.
+      # Not our outage, but the customer should hear it from us first.
+      - alert: RelayEndpointFailing
+        expr: max(relay_breaker_open_endpoints) > 0
+        for: 15m
+        labels:
+          severity: notify
+        annotations:
+          summary: "{{ $value }} endpoint(s) have been failing for 15 minutes"
+          description: >-
+            {{ $value }} endpoint(s) have an open circuit breaker. Their deliveries are
+            on hold and will resume automatically when the receiver recovers.
+          runbook: docs/runbooks/endpoint-failing.md
+
+      # Prometheus cannot reach a process at all. Without this, a dead worker
+      # would simply stop reporting and every other alert would stay quiet.
+      - alert: RelayTargetDown
+        expr: up{job=~"relay-.*"} == 0
+        for: 2m
+        labels:
+          severity: page
+        annotations:
+          summary: "{{ $labels.job }} is not answering Prometheus"
+          description: "{{ $labels.instance }} has been unreachable for 2 minutes."
+          runbook: docs/runbooks/queue-lag.md

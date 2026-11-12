@@ -5,6 +5,7 @@
 #   Postgres  localhost:5433  user/password/db: relay
 #             (5433 on the host so it never clashes with a locally installed Postgres)
 #   Redis     localhost:6379
+#   Grafana   http://localhost:3000   Prometheus  http://localhost:9090
 
 name: relay
 
@@ -93,5 +94,41 @@ services:
     # Time to finish in-flight deliveries after SIGTERM before Docker kills it.
     stop_grace_period: 30s
 
+  # Metrics: http://localhost:9090 (alerts under Status > Alerts)
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./infra/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - promdata:/prometheus
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Dashboards: http://localhost:3000 (no login needed locally)
+  grafana:
+    image: grafana/grafana:13.2.6
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      # Local convenience only: anyone who can reach port 3000 can view. The port
+      # is bound to 127.0.0.1, so that means this machine.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/relay-overview.json
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
 volumes:
   pgdata:
+  promdata:

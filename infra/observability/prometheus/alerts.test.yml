@@ -1,0 +1,111 @@
+# Unit tests for the alert rules: feed in made-up metric values over time and
+# check exactly when each alert fires. Run with:
+#
+#   promtool test rules alerts.test.yml
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ------------------------------------------------------------ queue lagging
+  - name: queue lag pages only after 10 minutes above 5 minutes of lag
+    interval: 1m
+    input_series:
+      # 0-4 min: healthy. From minute 5: stuck at 400 s (above the 300 s limit).
+      - series: relay_oldest_pending_age_seconds
+        values: "0x4 400x20"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: RelayQueueLagging
+        exp_alerts: []
+      - eval_time: 14m  # over the limit for 9 minutes: still only pending
+        alertname: RelayQueueLagging
+        exp_alerts: []
+      - eval_time: 16m  # over the limit for more than 10 minutes: fires
+        alertname: RelayQueueLagging
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: "Webhook deliveries are running 6m 40s late"
+              description: >-
+                The most overdue deliverable delivery has been waiting 6m 40s. Workers
+                are not keeping up with the queue, or are not running.
+              runbook: docs/runbooks/queue-lag.md
+
+  - name: a short spike of lag does not page anyone
+    interval: 1m
+    input_series:
+      - series: relay_oldest_pending_age_seconds
+        values: "0x2 900x5 0x20"  # 6 minutes of lag, then workers catch up
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: RelayQueueLagging
+        exp_alerts: []
+
+  - name: lag just under the limit never fires
+    interval: 1m
+    input_series:
+      - series: relay_oldest_pending_age_seconds
+        values: "299x30"
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: RelayQueueLagging
+        exp_alerts: []
+
+  # --------------------------------------------------------- endpoint failing
+  - name: an endpoint failing for 15 minutes notifies
+    interval: 1m
+    input_series:
+      - series: relay_breaker_open_endpoints
+        values: "0x2 2x30"
+    alert_rule_test:
+      - eval_time: 16m  # open for 13 minutes
+        alertname: RelayEndpointFailing
+        exp_alerts: []
+      - eval_time: 19m  # open for more than 15 minutes
+        alertname: RelayEndpointFailing
+        exp_alerts:
+          - exp_labels:
+              severity: notify
+            exp_annotations:
+              summary: "2 endpoint(s) have been failing for 15 minutes"
+              description: >-
+                2 endpoint(s) have an open circuit breaker. Their deliveries are on hold
+                and will resume automatically when the receiver recovers.
+              runbook: docs/runbooks/endpoint-failing.md
+
+  - name: an endpoint that recovers within 15 minutes does not notify
+    interval: 1m
+    input_series:
+      - series: relay_breaker_open_endpoints
+        values: "1x10 0x20"
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: RelayEndpointFailing
+        exp_alerts: []
+
+  # -------------------------------------------------------------- target down
+  - name: a worker that stops answering pages after 2 minutes
+    interval: 1m
+    input_series:
+      - series: 'up{job="relay-worker", instance="worker:9100"}'
+        values: "1x2 0x10"
+      - series: 'up{job="relay-api", instance="api:8000"}'
+        values: "1x12"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: RelayTargetDown
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: RelayTargetDown
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              job: relay-worker
+              instance: worker:9100
+            exp_annotations:
+              summary: "relay-worker is not answering Prometheus"
+              description: "worker:9100 has been unreachable for 2 minutes."
+              runbook: docs/runbooks/queue-lag.md

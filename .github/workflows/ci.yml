@@ -96,6 +96,18 @@ jobs:
         if: failure()
         run: docker compose -f docker-compose.yml -f docker-compose.e2e.yml logs --tail 200
 
+  observability:
+    name: Alert rules - unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check and test the Prometheus alert rules
+        run: |
+          docker run --rm -v "$PWD/infra/observability/prometheus:/p" -w /p \
+            --entrypoint promtool prom/prometheus:v3.16.0 check rules alerts.yml
+          docker run --rm -v "$PWD/infra/observability/prometheus:/p" -w /p \
+            --entrypoint promtool prom/prometheus:v3.16.0 test rules alerts.test.yml
+
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest

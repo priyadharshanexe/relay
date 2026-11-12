@@ -1,0 +1,10 @@
+# Loads every dashboard JSON in the mounted folder at start-up.
+apiVersion: 1
+providers:
+  - name: relay
+    folder: Relay
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
