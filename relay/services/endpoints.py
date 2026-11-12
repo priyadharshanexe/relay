@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.core.config import Settings
@@ -257,3 +257,49 @@ async def active_secrets(
         .order_by(EndpointSecret.active_from.desc(), EndpointSecret.id)
     )
     return [box.decrypt(row.secret_encrypted, context=str(endpoint_id)) for row in rows]
+
+
+@dataclass(frozen=True, slots=True)
+class EndpointHealth:
+    endpoint_id: uuid.UUID
+    attempts: int
+    successes: int
+    p95_ms: int | None
+
+    @property
+    def success_rate(self) -> float | None:
+        return self.successes / self.attempts if self.attempts else None
+
+
+_HEALTH = text(
+    """
+    SELECT d.endpoint_id,
+           count(*) AS attempts,
+           count(*) FILTER (WHERE a.error_kind IS NULL) AS successes,
+           percentile_cont(0.95) WITHIN GROUP (ORDER BY a.duration_ms) AS p95_ms
+    FROM attempts a
+    JOIN deliveries d ON d.id = a.delivery_id
+    WHERE d.org_id = :org_id AND a.started_at >= :since
+    GROUP BY d.endpoint_id
+    """
+)
+
+
+async def endpoint_health(
+    session: AsyncSession, org_id: uuid.UUID, *, since: datetime
+) -> list[EndpointHealth]:
+    """Success rate and 95th-percentile latency per endpoint since ``since``.
+
+    p95 means "95% of attempts were at least this fast": unlike an average, it
+    is not hidden by many quick responses when some are very slow.
+    """
+    rows = await session.execute(_HEALTH, {"org_id": org_id, "since": since})
+    return [
+        EndpointHealth(
+            row.endpoint_id,
+            row.attempts,
+            row.successes,
+            round(row.p95_ms) if row.p95_ms is not None else None,
+        )
+        for row in rows
+    ]

@@ -1,7 +1,7 @@
 """Endpoint management routes (dashboard)."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter
@@ -107,6 +107,33 @@ async def create_endpoint(
         now=utc_now(),
     )
     return EndpointCreated(**EndpointOut.model_validate(endpoint).model_dump(), secret=secret)
+
+
+class EndpointHealthOut(BaseModel):
+    endpoint_id: uuid.UUID
+    attempts: int
+    successes: int
+    success_rate: float | None = Field(description="0 to 1; null when there were no attempts.")
+    p95_ms: int | None
+
+
+# Declared before /{endpoint_id} so "health" is not read as an id.
+@router.get("/health")
+async def endpoint_health(context: OrgDep, session: SessionDep) -> list[EndpointHealthOut]:
+    """Success rate and p95 latency of each endpoint over the last 24 hours."""
+    health = await endpoint_service.endpoint_health(
+        session, context.org_id, since=utc_now() - timedelta(hours=24)
+    )
+    return [
+        EndpointHealthOut(
+            endpoint_id=item.endpoint_id,
+            attempts=item.attempts,
+            successes=item.successes,
+            success_rate=item.success_rate,
+            p95_ms=item.p95_ms,
+        )
+        for item in health
+    ]
 
 
 @router.get("/{endpoint_id}")
