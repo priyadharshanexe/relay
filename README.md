@@ -2,7 +2,7 @@
 
 Reliable, signed webhook delivery: a transactional outbox, retries with backoff, a dead-letter queue and replay.
 
-> **Status:** under active development. The backend pipeline works end to end, and the dashboard covers sign-in, endpoints, API keys and test receivers. The delivery explorer and live feed pages are next.
+> **Status:** under active development. The backend pipeline and the dashboard work end to end, covered by an automated browser test. Observability, a load test and deployment are next.
 > The full README (architecture diagram, guarantees, demo) arrives with the first release.
 
 ## Quick start
@@ -69,6 +69,15 @@ npm install
 npm run dev          # http://localhost:5173, forwards API calls to localhost:8000
 npm test             # component and API-client tests
 npm run typecheck
+```
+
+End-to-end test (a real browser against the whole stack; the override shortens the retry schedule so a failing delivery is dead-lettered in seconds):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build --wait
+cd frontend
+npx playwright install chromium   # first time only
+npm run e2e
 ```
 
 ## Project layout
