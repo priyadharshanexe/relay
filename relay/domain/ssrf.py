@@ -105,10 +105,25 @@ class AddressPolicy:
     """Which destination addresses are allowed.
 
     ``allow_private_networks`` exists for local development and the test suite,
-    where the receiver runs on localhost. It must be off in production.
+    where the receiver runs on localhost or a private network. It must be off in
+    production. Even when it is on, link-local addresses (which include the cloud
+    metadata endpoint), multicast and the unspecified address stay blocked.
     """
 
     allow_private_networks: bool = False
+
+    def _reason(self, ip: IPAddress) -> str | None:
+        if not self.allow_private_networks:
+            return _block_reason(ip)
+        # Development needs loopback and private ranges (a receiver on this
+        # machine or on the Docker network). It never needs these:
+        if ip.is_link_local:
+            return "link-local address (includes cloud metadata)"
+        if ip.is_multicast:
+            return "multicast address"
+        if ip.is_unspecified:
+            return "unspecified address"
+        return None
 
     def check(self, address: str | IPAddress) -> IPAddress:
         """Return the parsed address if it is allowed; raise ``BlockedAddressError`` if not."""
@@ -116,14 +131,11 @@ class AddressPolicy:
             ip = ipaddress.ip_address(address) if isinstance(address, str) else address
         except ValueError as exc:
             raise BlockedAddressError(f"not an IP address: {address!r}") from exc
-        if self.allow_private_networks:
-            return ip
-
-        reason = _block_reason(ip)
+        reason = self._reason(ip)
         if reason is None and isinstance(ip, ipaddress.IPv6Address):
             embedded = _embedded_ipv4(ip)
             if embedded is not None:
-                reason = _block_reason(embedded)
+                reason = self._reason(embedded)
         if reason is not None:
             raise BlockedAddressError(f"{ip} is blocked: {reason}")
         return ip

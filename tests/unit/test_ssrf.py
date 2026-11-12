@@ -88,6 +88,28 @@ def test_garbage_is_not_an_address() -> None:
         policy.check("example.com")
 
 
+@pytest.mark.parametrize(
+    "address",
+    [
+        "169.254.169.254",
+        "169.254.0.1",
+        "fe80::1",
+        "::ffff:169.254.169.254",
+        "224.0.0.1",
+        "0.0.0.0",  # noqa: S104
+        "::",
+    ],
+)
+def test_development_mode_still_blocks_metadata_and_other_special_addresses(address: str) -> None:
+    with pytest.raises(BlockedAddressError):
+        AddressPolicy(allow_private_networks=True).check(address)
+
+
+@pytest.mark.parametrize("address", ["127.0.0.1", "::1", "10.0.0.5", "172.18.0.3", "192.168.1.10"])
+def test_development_mode_allows_loopback_and_private_networks(address: str) -> None:
+    assert str(AddressPolicy(allow_private_networks=True).check(address)) == address
+
+
 def test_development_mode_allows_local_addresses() -> None:
     assert str(AddressPolicy(allow_private_networks=True).check("127.0.0.1")) == "127.0.0.1"
 
