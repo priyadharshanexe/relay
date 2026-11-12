@@ -1,5 +1,6 @@
 # Local development stack: `docker compose up --build`
 #
+#   Dashboard http://localhost:8080
 #   API       http://localhost:8000  (OpenAPI docs at /docs)
 #   Postgres  localhost:5433  user/password/db: relay
 #             (5433 on the host so it never clashes with a locally installed Postgres)
@@ -72,6 +73,16 @@ services:
     <<: *app
     ports:
       - "8000:8000"
+
+  # The dashboard: http://localhost:8080
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
 
   worker:
     <<: *app

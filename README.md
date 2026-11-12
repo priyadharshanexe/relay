@@ -2,7 +2,7 @@
 
 Reliable, signed webhook delivery: a transactional outbox, retries with backoff, a dead-letter queue and replay.
 
-> **Status:** under active development. The backend pipeline works end to end: ingestion, signed delivery, retries with backoff, circuit breaker, rate limiting, dead-letter queue and replay, plus a built-in test receiver for trying every failure mode. The dashboard is next.
+> **Status:** under active development. The backend pipeline works end to end, and the dashboard covers sign-in, endpoints, API keys and test receivers. The delivery explorer and live feed pages are next.
 > The full README (architecture diagram, guarantees, demo) arrives with the first release.
 
 ## Quick start
@@ -15,6 +15,7 @@ docker compose up --build
 
 | Service  | Address |
 |----------|---------|
+| Dashboard | http://localhost:8080 |
 | API      | http://localhost:8000 (interactive docs at http://localhost:8000/docs) |
 | Postgres | `localhost:5433`, user/password/database `relay` |
 | Redis    | `localhost:6379` |
@@ -60,6 +61,16 @@ uv run uvicorn --factory relay.main:create_app --reload
 uv run python -m relay.worker
 ```
 
+### Dashboard
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:5173, forwards API calls to localhost:8000
+npm test             # component and API-client tests
+npm run typecheck
+```
+
 ## Project layout
 
 ```
@@ -70,6 +81,7 @@ relay/
   domain/    pure business logic, with no web, database or network imports
   services/  use cases that combine domain logic with I/O
   worker/    claim (SKIP LOCKED), send (IP-pinned), record, and the worker loop
+frontend/    the React dashboard (TypeScript, Vite, TanStack Query, Tailwind)
 tests/
   unit/         fast tests, no services needed
   integration/  tests against real Postgres and Redis

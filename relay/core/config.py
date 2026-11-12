@@ -46,7 +46,11 @@ class Settings(BaseSettings):
     # None means "secure cookies in production, plain in development and tests".
     cookie_secure: bool | None = None
     # Browser origins allowed to call the API with cookies (JSON list in the env var).
-    allowed_origins: list[str] = ["http://localhost:5173", "http://localhost:8000"]
+    allowed_origins: list[str] = [
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:8080",  # dashboard container
+        "http://localhost:8000",
+    ]
 
     # Endpoints and events
     # Encrypts endpoint signing secrets at rest: base64 of 32 random bytes.

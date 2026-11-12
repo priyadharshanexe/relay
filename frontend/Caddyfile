@@ -1,0 +1,21 @@
+# One origin for everything: the dashboard's files and the API behind it.
+# Because the browser only ever talks to this one address, session cookies work
+# without any cross-origin (CORS) configuration.
+:80 {
+	encode zstd gzip
+
+	@api path /v1/* /receiver/* /healthz /readyz /docs /openapi.json
+	handle @api {
+		reverse_proxy {$RELAY_API_UPSTREAM:api:8000} {
+			# Pass each chunk on immediately: the live feed is a streamed response.
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv
+		# The dashboard does its own routing, so unknown paths get index.html.
+		try_files {path} /index.html
+		file_server
+	}
+}
