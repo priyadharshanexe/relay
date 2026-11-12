@@ -6,6 +6,7 @@
 #             (5433 on the host so it never clashes with a locally installed Postgres)
 #   Redis     localhost:6379
 #   Grafana   http://localhost:3000   Prometheus  http://localhost:9090
+#   Jaeger    http://localhost:16686  (traces)
 
 name: relay
 
@@ -23,6 +24,8 @@ x-app: &app
     RELAY_ENDPOINTS_ALLOW_PRIVATE_NETWORKS: "true"
     # How the worker reaches the API's built-in test receiver on this network.
     RELAY_RECEIVER_BASE_URL: http://api:8000
+    # Send traces to Jaeger. Remove this line to turn tracing off.
+    RELAY_OTLP_ENDPOINT: http://jaeger:4318
   depends_on:
     migrate:
       condition: service_completed_successfully
@@ -93,6 +96,13 @@ services:
       disable: true
     # Time to finish in-flight deliveries after SIGTERM before Docker kills it.
     stop_grace_period: 30s
+
+  # Traces: http://localhost:16686
+  jaeger:
+    image: jaegertracing/jaeger:2.23.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:16686:16686"
 
   # Metrics: http://localhost:9090 (alerts under Status > Alerts)
   prometheus:

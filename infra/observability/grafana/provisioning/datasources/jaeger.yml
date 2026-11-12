@@ -1,0 +1,9 @@
+# Lets Grafana's Explore view search and show traces from Jaeger.
+apiVersion: 1
+datasources:
+  - name: Jaeger
+    uid: relay-jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: false

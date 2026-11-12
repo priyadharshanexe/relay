@@ -2,7 +2,7 @@
 
 Reliable, signed webhook delivery: a transactional outbox, retries with backoff, a dead-letter queue and replay.
 
-> **Status:** under active development. The backend, the dashboard, metrics, alerts and a load test are done. Tracing and deployment are next.
+> **Status:** under active development. The backend, the dashboard, metrics, alerts, tracing and a load test are done. Deployment is next.
 > The full README (architecture diagram, guarantees, demo) arrives with the first release.
 
 ## Quick start
@@ -21,6 +21,7 @@ docker compose up --build
 | Redis    | `localhost:6379` |
 | Grafana  | http://localhost:3000 (the "Relay overview" dashboard, no login locally) |
 | Prometheus | http://localhost:9090 (alerts under Alerts) |
+| Jaeger   | http://localhost:16686 (traces) |
 
 Postgres is published on host port 5433, not 5432, so it never clashes with a Postgres you may already have installed.
 
@@ -85,6 +86,7 @@ npm run e2e
 ## Observability
 
 - **Metrics:** the API serves `/metrics` and each worker serves its own on port 9100. Prometheus scrapes both.
+- **Traces:** one trace per webhook, from the API request through the SQL statements and the worker to the outbound HTTP call, even when the delivery happens hours later. The trace context is stored on the event row and picked up again by the worker. Every log line carries its `trace_id`. Off unless `RELAY_OTLP_ENDPOINT` is set.
 - **Dashboard:** queue lag, queue depth, delivery success rate and duration, ingest rate and API latency.
 - **Alerts** ([rules](infra/observability/prometheus/alerts.yml), with [unit tests](infra/observability/prometheus/alerts.test.yml) that run in CI):
 
