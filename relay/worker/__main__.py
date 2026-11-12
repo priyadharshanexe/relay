@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay.core.config import Settings, get_settings
 from relay.core.crypto import SecretBox
+from relay.core.live import LivePublisher
 from relay.core.logging import configure_logging
 from relay.core.redis import create_redis
 from relay.core.redis_rate_limit import RedisRateLimiter
@@ -27,6 +28,7 @@ def build_processor(
     sender: Sender,
     rate_limiter: RateLimiter,
     worker_id: str,
+    publisher: LivePublisher | None = None,
 ) -> DeliveryProcessor:
     return DeliveryProcessor(
         sessions=sessions,
@@ -49,6 +51,7 @@ def build_processor(
         worker_id=worker_id,
         trusted_url_prefix=settings.receiver_url_prefix,
         only_trusted=settings.delivery_only_to_receiver,
+        publisher=publisher,
     )
 
 
@@ -68,6 +71,7 @@ async def _main(settings: Settings) -> None:
         sender=sender,
         rate_limiter=RedisRateLimiter(redis),
         worker_id=worker_id,
+        publisher=LivePublisher(redis),
     )
     worker = DeliveryWorker(
         sessions=sessions,

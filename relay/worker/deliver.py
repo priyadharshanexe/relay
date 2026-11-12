@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay import __version__
 from relay.core.crypto import DecryptionError, SecretBox
+from relay.core.live import LivePublisher
 from relay.core.logging import get_logger
 from relay.db.models import Attempt, Delivery, Endpoint, Event
 from relay.domain.backoff import BackoffPolicy, parse_retry_after
@@ -92,6 +93,9 @@ class _Job:
     body: bytes
     message_id: str
     secrets: list[str]
+    org_id: uuid.UUID
+    event_id: uuid.UUID
+    event_type: str
 
 
 class DeliveryProcessor:
@@ -110,6 +114,7 @@ class DeliveryProcessor:
         worker_id: str,
         trusted_url_prefix: str | None = None,
         only_trusted: bool = False,
+        publisher: LivePublisher | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         # URLs under trusted_url_prefix are our own built-in receiver: they live
@@ -117,6 +122,7 @@ class DeliveryProcessor:
         # only_trusted (public demo mode) refuses every other destination.
         self._trusted_url_prefix = trusted_url_prefix
         self._only_trusted = only_trusted
+        self._publisher = publisher
         self._sessions = sessions
         self._sender = sender
         self._resolver = resolver
@@ -211,6 +217,9 @@ class DeliveryProcessor:
                 body=build_body(event.id, event.type, event.created_at, event.payload),
                 message_id=str(event.id),
                 secrets=secrets,
+                org_id=delivery.org_id,
+                event_id=event.id,
+                event_type=event.type,
             )
 
     async def _rate_limit_wait(self, endpoint_id: uuid.UUID, rate: int) -> float:
@@ -330,6 +339,24 @@ class DeliveryProcessor:
                 )
 
             await session.commit()
+
+        if self._publisher is not None:
+            await self._publisher.publish(
+                job.org_id,
+                {
+                    "type": "delivery.attempt",
+                    "delivery_id": str(job.delivery_id),
+                    "event_id": str(job.event_id),
+                    "event_type": job.event_type,
+                    "endpoint_id": str(job.endpoint_id),
+                    "status": delivery.status,
+                    "attempt": job.attempt_number,
+                    "status_code": result.status_code,
+                    "error_kind": result.error_kind,
+                    "duration_ms": result.duration_ms,
+                    "at": now.isoformat(),
+                },
+            )
 
         log.info(
             "deliver.attempt",

@@ -18,6 +18,7 @@ from relay.api import (
     health,
     orgs,
     receivers,
+    stream,
 )
 from relay.core.config import Settings, get_settings
 from relay.core.crypto import SecretBox
@@ -72,5 +73,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(events.router)
     v1.include_router(deliveries.router)
     v1.include_router(receivers.router)
+    v1.include_router(stream.router)
     app.include_router(v1)
     return app

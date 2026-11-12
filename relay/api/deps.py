@@ -127,22 +127,31 @@ class OrgContext:
     role: Role
 
 
-async def org_context(
-    user: CurrentUser,
-    session: SessionDep,
-    x_org_id: Annotated[uuid.UUID | None, Header()] = None,
-) -> OrgContext:
-    """Pick the organisation for this request: the ``X-Org-ID`` header if given,
-    otherwise the user's first organisation. Membership is always checked."""
+async def resolve_membership(
+    session: AsyncSession, user: User, org_id: uuid.UUID | None
+) -> Membership:
+    """The user's membership in ``org_id``, or in their first organisation when
+    none is named. Membership is always checked against the database."""
     query = select(Membership).where(Membership.user_id == user.id)
-    if x_org_id is not None:
-        query = query.where(Membership.org_id == x_org_id)
+    if org_id is not None:
+        query = query.where(Membership.org_id == org_id)
     membership = await session.scalar(
         query.order_by(Membership.created_at, Membership.org_id).limit(1)
     )
     if membership is None:
         # Same answer whether the organisation doesn't exist or you aren't in it.
         raise AppError(404, "organization_not_found", "No such organisation.")
+    return membership
+
+
+async def org_context(
+    user: CurrentUser,
+    session: SessionDep,
+    x_org_id: Annotated[uuid.UUID | None, Header()] = None,
+) -> OrgContext:
+    """Pick the organisation for this request: the ``X-Org-ID`` header if given,
+    otherwise the user's first organisation."""
+    membership = await resolve_membership(session, user, x_org_id)
     return OrgContext(user, membership.org_id, Role(membership.role))
 
 
