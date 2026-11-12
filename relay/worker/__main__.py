@@ -39,7 +39,7 @@ def build_processor(
         ),
         require_https=settings.endpoints_must_use_https,
         secret_box=SecretBox(settings.encryption_key.get_secret_value()),
-        backoff=ScheduleBackoff(),
+        backoff=ScheduleBackoff(settings.retry_schedule_seconds),
         breaker=CircuitBreaker(
             BreakerConfig(
                 failure_threshold=settings.breaker_failure_threshold,

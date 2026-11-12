@@ -91,6 +91,12 @@ class Settings(BaseSettings):
     delivery_connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
     delivery_total_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
     delivery_response_snippet_bytes: int = Field(default=2048, ge=0, le=65536)
+    # Seconds to wait before each attempt (JSON list in the env var). The first
+    # is the delay before attempt 1; when the list runs out the delivery is dead.
+    # Shorten it for demos, e.g. [0, 2, 2].
+    retry_schedule_seconds: list[float] = Field(
+        default=[0, 30, 120, 600, 3600, 21600, 86400], min_length=1, max_length=20
+    )
     breaker_failure_threshold: int = Field(default=5, ge=1)
     breaker_cooldown_seconds: int = Field(default=60, ge=1)
 
@@ -131,6 +137,13 @@ class Settings(BaseSettings):
                 )
             if self.endpoints_allow_private_networks:
                 raise ValueError("RELAY_ENDPOINTS_ALLOW_PRIVATE_NETWORKS must be off in production")
+        if any(delay < 0 for delay in self.retry_schedule_seconds):
+            raise ValueError("RELAY_RETRY_SCHEDULE_SECONDS cannot contain negative delays")
+        if self.worker_lock_seconds <= self.delivery_total_timeout_seconds * 2:
+            raise ValueError(
+                "RELAY_WORKER_LOCK_SECONDS must be more than twice the delivery timeout, "
+                "or a slow delivery could be claimed by a second worker"
+            )
         return self
 
 

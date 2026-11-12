@@ -1,0 +1,12 @@
+# Overrides for the end-to-end test: a short retry schedule, so a failing
+# delivery reaches the dead-letter queue in seconds instead of a day.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up --build --wait
+services:
+  worker:
+    environment:
+      RELAY_RETRY_SCHEDULE_SECONDS: "[0, 1, 1]"
+      RELAY_WORKER_POLL_INTERVAL_SECONDS: "0.5"
+  api:
+    environment:
+      RELAY_REGISTRATIONS_PER_HOUR: "1000"
