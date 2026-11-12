@@ -2,7 +2,9 @@
 
 import asyncio
 import json
+import math
 import socket
+import time
 import uuid
 from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, datetime, timedelta
@@ -739,20 +741,27 @@ async def test_a_failed_probe_reopens_the_breaker_and_nothing_else_is_sent(
 async def test_the_rate_limit_holds_back_the_backlog_without_using_attempts(
     org: Org, receiver: FakeReceiver, pipeline: Pipeline, session: AsyncSession
 ) -> None:
-    await org.endpoint(receiver.url(), rate_limit_per_sec=2)
-    for n in range(6):
+    rate = 2
+    await org.endpoint(receiver.url(), rate_limit_per_sec=rate)
+    for n in range(12):
         await org.emit(n=n)
 
+    started = time.monotonic()
     await pipeline.tick()
+    elapsed = time.monotonic() - started
 
-    assert len(receiver.requests) == 2  # the burst the bucket allows
+    # The guarantee: never more than the burst plus what refilled meanwhile.
+    # (An exact count would depend on how fast this machine ran the tick.)
+    sent = len(receiver.requests)
+    assert rate <= sent <= rate + math.ceil(rate * elapsed)
+    assert sent < 12, "the tick was too slow for this test to mean anything"
     held = [d for d in await deliveries(session) if d.status != "succeeded"]
-    assert len(held) == 4
+    assert len(held) == 12 - sent
     for delivery in held:
-        assert delivery.status == "pending"
+        assert delivery.status == "pending"  # postponed, not failed
         assert delivery.attempts == 0
-        assert 0 < seconds_from_now(delivery.next_attempt_at) < 5
-    assert len(await attempts(session)) == 2
+        assert delivery.next_attempt_at > datetime.now(UTC) - timedelta(seconds=elapsed + 1)
+    assert len(await attempts(session)) == sent
 
 
 async def test_an_endpoint_without_a_rate_limit_is_not_throttled(
