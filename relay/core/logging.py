@@ -8,14 +8,29 @@ formatter, so the whole process emits one consistent format.
 
 import logging
 import sys
+from collections.abc import MutableMapping
+from typing import Any
 
 import structlog
+from opentelemetry import trace
 from structlog.typing import Processor
+
+
+def _add_trace_id(
+    _logger: Any, _method: str, event: MutableMapping[str, Any]
+) -> MutableMapping[str, Any]:
+    """Stamp each log line with the trace it belongs to, so you can jump from a
+    log line to its trace and back."""
+    context = trace.get_current_span().get_span_context()
+    if context.is_valid:
+        event["trace_id"] = format(context.trace_id, "032x")
+    return event
 
 
 def configure_logging(level: str = "INFO", *, json: bool = True) -> None:
     shared: list[Processor] = [
         structlog.contextvars.merge_contextvars,
+        _add_trace_id,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso", utc=True),

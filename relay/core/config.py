@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     log_level: LogLevel = "INFO"
+    # Where to send traces (an OTLP/HTTP collector such as Jaeger or Tempo),
+    # e.g. http://jaeger:4318. Leave unset to turn tracing off.
+    otlp_endpoint: str | None = None
     log_json: bool = True
 
     # Dashboard sessions

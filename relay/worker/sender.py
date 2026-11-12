@@ -106,6 +106,11 @@ class Sender:
             limits=httpx.Limits(max_connections=200, max_keepalive_connections=0),
         )
 
+    @property
+    def client(self) -> httpx.AsyncClient:
+        """The underlying client, exposed so tracing can be attached to it."""
+        return self._client
+
     async def aclose(self) -> None:
         await self._client.aclose()
 

@@ -5,8 +5,12 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from opentelemetry import trace
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 from relay.core.config import Settings
+from relay.core.telemetry import build_provider
 from relay.main import create_app
 
 # Locally these come from `docker compose up -d postgres redis`; in CI from the
@@ -16,6 +20,12 @@ TEST_DATABASE_URL = os.environ.get(
     "RELAY_TEST_DATABASE_URL", "postgresql+asyncpg://relay:relay@localhost:5433/relay_test"
 )
 TEST_REDIS_URL = os.environ.get("RELAY_TEST_REDIS_URL", "redis://localhost:6379/15")
+
+
+# Tracing in tests: spans are collected in memory instead of being exported.
+# The provider is process-wide and can only be installed once, so it lives here.
+SPANS = InMemorySpanExporter()
+trace.set_tracer_provider(build_provider("relay-test", "test", [SimpleSpanProcessor(SPANS)]))
 
 
 def make_settings(**overrides: Any) -> Settings:

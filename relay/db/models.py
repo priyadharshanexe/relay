@@ -207,6 +207,9 @@ class Event(Base):
     type: Mapped[str] = mapped_column(String(200))
     payload: Mapped[dict[str, Any]]
     idempotency_key: Mapped[str | None] = mapped_column(String(255))
+    # W3C trace context of the request that ingested this event. Workers read
+    # it to continue the same trace when they deliver, however much later.
+    traceparent: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[CreatedAt]
 
     __table_args__ = (

@@ -12,6 +12,7 @@ from relay.core.live import LivePublisher
 from relay.core.logging import configure_logging
 from relay.core.redis import create_redis
 from relay.core.redis_rate_limit import RedisRateLimiter
+from relay.core.telemetry import configure_tracing, instrument_engine, instrument_http_client
 from relay.db.session import create_engine, create_session_factory
 from relay.domain.backoff import ScheduleBackoff
 from relay.domain.circuit_breaker import BreakerConfig, CircuitBreaker
@@ -57,13 +58,16 @@ def build_processor(
 
 
 async def _main(settings: Settings) -> None:
+    tracer_provider = configure_tracing(settings, "relay-worker")
     engine = create_engine(settings, application_name="relay-worker")
+    instrument_engine(engine)
     redis = create_redis(settings)
     sender = Sender(
         connect_timeout=settings.delivery_connect_timeout_seconds,
         total_timeout=settings.delivery_total_timeout_seconds,
         snippet_bytes=settings.delivery_response_snippet_bytes,
     )
+    instrument_http_client(sender.client)
     sessions = create_session_factory(engine)
     worker_id = new_worker_id()
     processor = build_processor(
@@ -93,6 +97,8 @@ async def _main(settings: Settings) -> None:
         await sender.aclose()
         await redis.aclose()
         await engine.dispose()
+        if tracer_provider is not None:
+            tracer_provider.shutdown()  # flush spans still in the buffer
 
 
 def main() -> None:

@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
+from opentelemetry.trace import SpanKind, Status, StatusCode
 from redis.exceptions import RedisError
 from sqlalchemy import CursorResult, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -28,6 +29,7 @@ from relay.core import metrics
 from relay.core.crypto import DecryptionError, SecretBox
 from relay.core.live import LivePublisher
 from relay.core.logging import get_logger
+from relay.core.telemetry import context_from, get_tracer
 from relay.db.models import Attempt, Delivery, Endpoint, Event
 from relay.domain.backoff import BackoffPolicy, parse_retry_after
 from relay.domain.circuit_breaker import BreakerSnapshot, CircuitBreaker, PermissionKind
@@ -97,6 +99,7 @@ class _Job:
     org_id: uuid.UUID
     event_id: uuid.UUID
     event_type: str
+    traceparent: str | None
 
 
 class DeliveryProcessor:
@@ -140,9 +143,29 @@ class DeliveryProcessor:
         job = await self._prepare(delivery_id)
         if job is None:
             return
-        started_at = self._clock()
-        request_headers, result = await self._send(job, started_at)
-        await self._record(job, started_at, request_headers, result)
+        # Continue the trace that began when the event was ingested. Every
+        # attempt for this delivery, even one made hours later, joins that trace.
+        with get_tracer().start_as_current_span(
+            "relay.deliver",
+            context=context_from(job.traceparent),
+            kind=SpanKind.CONSUMER,
+            attributes={
+                "relay.delivery_id": str(job.delivery_id),
+                "relay.event_id": str(job.event_id),
+                "relay.event_type": job.event_type,
+                "relay.endpoint_id": str(job.endpoint_id),
+                "relay.org_id": str(job.org_id),
+                "relay.attempt": job.attempt_number,
+            },
+        ) as span:
+            started_at = self._clock()
+            request_headers, result = await self._send(job, started_at)
+            if result.status_code is not None:
+                span.set_attribute("http.response.status_code", result.status_code)
+            if not result.succeeded:
+                span.set_attribute("relay.error_kind", str(result.error_kind))
+                span.set_status(Status(StatusCode.ERROR, result.error_message))
+            await self._record(job, started_at, request_headers, result)
 
     # ------------------------------------------------------------------ prepare
     async def _prepare(self, delivery_id: uuid.UUID) -> _Job | None:
@@ -235,6 +258,7 @@ class DeliveryProcessor:
                 org_id=delivery.org_id,
                 event_id=event.id,
                 event_type=event.type,
+                traceparent=event.traceparent,
             )
 
     async def _rate_limit_wait(self, endpoint_id: uuid.UUID, rate: int) -> float:

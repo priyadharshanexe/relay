@@ -27,6 +27,7 @@ from relay.core.errors import register_exception_handlers
 from relay.core.logging import configure_logging, get_logger
 from relay.core.middleware import RequestContextMiddleware
 from relay.core.redis import create_redis
+from relay.core.telemetry import configure_tracing, instrument_app, instrument_engine
 from relay.db.session import create_engine, create_session_factory
 
 log = get_logger("relay.api")
@@ -37,10 +38,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging(settings.log_level, json=settings.log_json)
     # Built before startup so a bad key stops the process immediately.
     secret_box = SecretBox(settings.encryption_key.get_secret_value())
+    tracer_provider = configure_tracing(settings, "relay-api")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(settings, application_name="relay-api")
+        instrument_engine(engine)
         redis = create_redis(settings)
         app.state.settings = settings
         app.state.secret_box = secret_box
@@ -53,6 +56,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             await redis.aclose()
             await engine.dispose()
+            if tracer_provider is not None:
+                tracer_provider.shutdown()  # flush spans still in the buffer
             log.info("api.stopped")
 
     app = FastAPI(
@@ -63,6 +68,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     register_exception_handlers(app)
     app.add_middleware(RequestContextMiddleware)
+    instrument_app(app)
     app.include_router(health.router)
     app.include_router(metrics.router)
     app.include_router(receivers.public_router)

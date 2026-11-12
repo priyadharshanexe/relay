@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.core import metrics
 from relay.core.errors import AppError
+from relay.core.telemetry import current_traceparent
 from relay.db.models import Delivery, Endpoint, Event
 from relay.domain.enums import EndpointStatus
 
@@ -72,6 +73,7 @@ async def create_event(
                 type=event_type,
                 payload=payload,
                 idempotency_key=idempotency_key,
+                traceparent=current_traceparent(),
             )
             .on_conflict_do_nothing(index_elements=[Event.org_id, Event.idempotency_key])
             .returning(Event.id)
