@@ -77,3 +77,65 @@ export interface Receiver {
   last_received_at: string | null;
   created_at: string;
 }
+
+export type DeliveryStatus = "pending" | "in_flight" | "retrying" | "succeeded" | "dead";
+
+export type ErrorKind =
+  | "timeout"
+  | "dns"
+  | "tls"
+  | "connect"
+  | "http_status"
+  | "ssrf_blocked"
+  | "other";
+
+export interface Delivery {
+  id: string;
+  event_id: string;
+  event_type: string;
+  endpoint_id: string;
+  endpoint_url: string;
+  status: DeliveryStatus;
+  attempts: number;
+  next_attempt_at: string;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Attempt {
+  id: string;
+  attempt_number: number;
+  started_at: string;
+  duration_ms: number;
+  status_code: number | null;
+  error_kind: ErrorKind | null;
+  response_snippet: string | null;
+  request_headers: Record<string, string>;
+  response_headers: Record<string, string> | null;
+}
+
+export interface DeliveryDetail extends Delivery {
+  payload: Record<string, unknown>;
+  attempt_log: Attempt[];
+}
+
+export interface Page<T> {
+  items: T[];
+  next_cursor: string | null;
+}
+
+/** One message on the live feed. */
+export interface LiveUpdate {
+  type: "delivery.attempt";
+  delivery_id: string;
+  event_id: string;
+  event_type: string;
+  endpoint_id: string;
+  status: DeliveryStatus;
+  attempt: number;
+  status_code: number | null;
+  error_kind: ErrorKind | null;
+  duration_ms: number;
+  at: string;
+}
