@@ -2,7 +2,7 @@
 
 Reliable, signed webhook delivery: a transactional outbox, retries with backoff, a dead-letter queue and replay.
 
-> **Status:** under active development. The backend pipeline and the dashboard work end to end, covered by an automated browser test. Observability, a load test and deployment are next.
+> **Status:** under active development. The backend, the dashboard, metrics, alerts and a load test are done. Tracing and deployment are next.
 > The full README (architecture diagram, guarantees, demo) arrives with the first release.
 
 ## Quick start
@@ -19,6 +19,8 @@ docker compose up --build
 | API      | http://localhost:8000 (interactive docs at http://localhost:8000/docs) |
 | Postgres | `localhost:5433`, user/password/database `relay` |
 | Redis    | `localhost:6379` |
+| Grafana  | http://localhost:3000 (the "Relay overview" dashboard, no login locally) |
+| Prometheus | http://localhost:9090 (alerts under Alerts) |
 
 Postgres is published on host port 5433, not 5432, so it never clashes with a Postgres you may already have installed.
 
@@ -80,6 +82,22 @@ npx playwright install chromium   # first time only
 npm run e2e
 ```
 
+## Observability
+
+- **Metrics:** the API serves `/metrics` and each worker serves its own on port 9100. Prometheus scrapes both.
+- **Dashboard:** queue lag, queue depth, delivery success rate and duration, ingest rate and API latency.
+- **Alerts** ([rules](infra/observability/prometheus/alerts.yml), with [unit tests](infra/observability/prometheus/alerts.test.yml) that run in CI):
+
+| Alert | Fires when | Runbook |
+|---|---|---|
+| `RelayQueueLagging` | a deliverable delivery has waited over 5 minutes, for 10 minutes | [queue-lag.md](docs/runbooks/queue-lag.md) |
+| `RelayEndpointFailing` | an endpoint's circuit breaker has been open for 15 minutes | [endpoint-failing.md](docs/runbooks/endpoint-failing.md) |
+| `RelayTargetDown` | Prometheus cannot reach the API or a worker for 2 minutes | [queue-lag.md](docs/runbooks/queue-lag.md) |
+
+## Load test
+
+On a laptop, one API process and one worker: **about 108 events/s at p95 164 ms**, and 165 events/s when saturated. 8,286 events in, 8,286 delivered exactly once. Method, machine and limits are in [docs/load-test.md](docs/load-test.md).
+
 ## Project layout
 
 ```
@@ -95,6 +113,8 @@ tests/
   unit/         fast tests, no services needed
   integration/  tests against real Postgres and Redis
 docs/decisions/ architecture decision records
+docs/runbooks/  what to do when an alert fires
+infra/observability/  Prometheus config, alert rules, Grafana dashboard
 ```
 
 ## Licence
