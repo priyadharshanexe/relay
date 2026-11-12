@@ -4,7 +4,10 @@ import { Layout } from "./components/Layout";
 import { ErrorState, LoadingState } from "./components/ui";
 import { ApiKeysPage } from "./pages/ApiKeysPage";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
+import { DeadLetterPage, DeliveriesPage } from "./pages/DeliveriesPage";
+import { DeliveryDetailPage } from "./pages/DeliveryDetailPage";
 import { EndpointsPage } from "./pages/EndpointsPage";
+import { LivePage } from "./pages/LivePage";
 import { ReceiversPage } from "./pages/ReceiversPage";
 
 export function App() {
@@ -35,6 +38,10 @@ export function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/endpoints" element={<EndpointsPage />} />
+          <Route path="/deliveries" element={<DeliveriesPage />} />
+          <Route path="/deliveries/:id" element={<DeliveryDetailPage />} />
+          <Route path="/dead-letter" element={<DeadLetterPage />} />
+          <Route path="/live" element={<LivePage />} />
           <Route path="/receivers" element={<ReceiversPage />} />
           <Route path="/api-keys" element={<ApiKeysPage />} />
           <Route path="*" element={<Navigate to="/endpoints" replace />} />

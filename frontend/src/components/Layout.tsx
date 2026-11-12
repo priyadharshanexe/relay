@@ -4,6 +4,9 @@ import { Badge, Button } from "./ui";
 
 const NAV = [
   { to: "/endpoints", label: "Endpoints" },
+  { to: "/deliveries", label: "Deliveries" },
+  { to: "/dead-letter", label: "Dead-letter queue" },
+  { to: "/live", label: "Live feed" },
   { to: "/receivers", label: "Test receivers" },
   { to: "/api-keys", label: "API keys" },
 ];
