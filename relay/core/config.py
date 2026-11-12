@@ -86,6 +86,8 @@ class Settings(BaseSettings):
     # A claim is a lease. It must comfortably exceed the delivery timeout, so a
     # healthy worker always finishes before its lease runs out.
     worker_lock_seconds: int = Field(default=60, ge=5, le=600)
+    # Where the worker serves /metrics for Prometheus. 0 turns it off.
+    worker_metrics_port: int = Field(default=9100, ge=0, le=65535)
 
     # Outbound delivery
     delivery_connect_timeout_seconds: float = Field(default=5.0, gt=0, le=60)

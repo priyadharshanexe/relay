@@ -24,6 +24,7 @@ from sqlalchemy import CursorResult, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay import __version__
+from relay.core import metrics
 from relay.core.crypto import DecryptionError, SecretBox
 from relay.core.live import LivePublisher
 from relay.core.logging import get_logger
@@ -171,13 +172,17 @@ class DeliveryProcessor:
             )
             permission = self._breaker.permission(snapshot, now)
             if permission.kind is PermissionKind.WAIT:
-                await self._postpone(session, delivery_id, permission.retry_at or now)
+                await self._postpone(
+                    session, delivery_id, permission.retry_at or now, reason="breaker_open"
+                )
                 return None
 
             if endpoint.rate_limit_per_sec is not None:
                 wait = await self._rate_limit_wait(endpoint.id, endpoint.rate_limit_per_sec)
                 if wait > 0:
-                    await self._postpone(session, delivery_id, now + timedelta(seconds=wait))
+                    await self._postpone(
+                        session, delivery_id, now + timedelta(seconds=wait), reason="rate_limit"
+                    )
                     return None
 
             if permission.kind is PermissionKind.PROBE:
@@ -199,7 +204,9 @@ class DeliveryProcessor:
                 )
                 if started.rowcount == 0:
                     await session.rollback()
-                    await self._postpone(session, delivery_id, now + _PROBE_RACE_DELAY)
+                    await self._postpone(
+                        session, delivery_id, now + _PROBE_RACE_DELAY, reason="breaker_open"
+                    )
                     return None
                 await session.commit()
 
@@ -243,7 +250,12 @@ class DeliveryProcessor:
         return 0.0 if decision.allowed else max(decision.retry_after, 0.05)
 
     async def _postpone(
-        self, session: AsyncSession, delivery_id: uuid.UUID, next_attempt_at: datetime
+        self,
+        session: AsyncSession,
+        delivery_id: uuid.UUID,
+        next_attempt_at: datetime,
+        *,
+        reason: str,
     ) -> None:
         """Back to the queue for later. ``attempts`` is deliberately untouched."""
         await session.execute(
@@ -251,6 +263,7 @@ class DeliveryProcessor:
             {"id": delivery_id, "worker_id": self._worker_id, "next_attempt_at": next_attempt_at},
         )
         await session.commit()
+        metrics.DELIVERIES_POSTPONED.labels(reason=reason).inc()
 
     # --------------------------------------------------------------------- send
     async def _send(self, job: _Job, started_at: datetime) -> tuple[dict[str, str], SendResult]:
@@ -347,6 +360,11 @@ class DeliveryProcessor:
                 )
 
             await session.commit()
+
+        metrics.DELIVERY_ATTEMPTS.labels(result=result.error_kind or "success").inc()
+        metrics.DELIVERY_DURATION.observe(result.duration_ms / 1000)
+        if still_ours and delivery.status in (DeliveryStatus.SUCCEEDED, DeliveryStatus.DEAD):
+            metrics.DELIVERIES_FINISHED.labels(outcome=delivery.status).inc()
 
         if self._publisher is not None:
             await self._publisher.publish(

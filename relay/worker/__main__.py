@@ -3,6 +3,7 @@
 import asyncio
 from datetime import timedelta
 
+from prometheus_client import start_http_server
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from relay.core.config import Settings, get_settings
@@ -82,6 +83,9 @@ async def _main(settings: Settings) -> None:
         lock_seconds=settings.worker_lock_seconds,
         worker_id=worker_id,
     )
+    if settings.worker_metrics_port:
+        # A tiny HTTP server on its own thread, for Prometheus to scrape.
+        start_http_server(settings.worker_metrics_port)
     install_signal_handlers(worker.request_stop)
     try:
         await worker.run()

@@ -23,6 +23,7 @@ from sqlalchemy import CursorResult, func, insert, literal, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from relay.core import metrics
 from relay.core.errors import AppError
 from relay.db.models import Delivery, Endpoint, Event
 from relay.domain.enums import EndpointStatus
@@ -109,6 +110,7 @@ async def create_event(
     )
 
     await session.commit()
+    metrics.EVENTS_INGESTED.inc()
     event = await session.get_one(Event, event_id)
     return IngestResult(event, deliveries_created=queued.rowcount, replayed=False)
 

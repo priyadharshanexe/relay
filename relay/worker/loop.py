@@ -20,6 +20,7 @@ from collections.abc import Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from relay.core import metrics
 from relay.core.logging import get_logger
 from relay.worker.claim import claim_due, sweep_expired
 
@@ -92,6 +93,7 @@ class DeliveryWorker(Worker):
         try:
             recovered = await sweep_expired(self._sessions)
             if recovered:
+                metrics.LEASES_RECOVERED.inc(len(recovered))
                 log.warning("worker.recovered_expired_leases", count=len(recovered))
             claimed = await claim_due(
                 self._sessions,

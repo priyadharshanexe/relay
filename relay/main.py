@@ -16,6 +16,7 @@ from relay.api import (
     endpoints,
     events,
     health,
+    metrics,
     orgs,
     receivers,
     stream,
@@ -63,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_exception_handlers(app)
     app.add_middleware(RequestContextMiddleware)
     app.include_router(health.router)
+    app.include_router(metrics.router)
     app.include_router(receivers.public_router)
 
     v1 = APIRouter(prefix="/v1")
