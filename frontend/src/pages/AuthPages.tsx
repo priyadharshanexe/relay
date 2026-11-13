@@ -5,6 +5,14 @@ import { SESSION_QUERY_KEY } from "../auth/AuthProvider";
 import { Button, ErrorState, Field, Input } from "../components/ui";
 import { api, fieldErrors, setCurrentOrgId } from "../lib/api";
 import type { Session } from "../lib/types";
+import {
+  collect,
+  emailAddress,
+  type Errors,
+  hasErrors,
+  newPassword,
+  requiredText,
+} from "../lib/validate";
 
 function AuthShell({ title, children, footer }: { title: string; children: ReactNode; footer: ReactNode }) {
   return (
@@ -48,11 +56,21 @@ function useStartSession(path: string) {
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<Errors<"email" | "password">>({});
   const login = useStartSession("/v1/auth/login");
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    login.mutate({ email, password });
+    const found = collect({
+      email: emailAddress(email),
+      password: password ? undefined : "Enter your password.",
+    });
+    setErrors(found);
+    if (hasErrors(found)) {
+      login.reset(); // drop any earlier server error: the form is what is wrong now
+      return;
+    }
+    login.mutate({ email: email.trim(), password });
   }
 
   return (
@@ -68,25 +86,23 @@ export function LoginPage() {
       }
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
-        <Field label="Email">
+        <Field label="Email" error={errors.email}>
           {(props) => (
             <Input
               {...props}
               type="email"
               autoComplete="email"
-              required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
           )}
         </Field>
-        <Field label="Password">
+        <Field label="Password" error={errors.password}>
           {(props) => (
             <Input
               {...props}
               type="password"
               autoComplete="current-password"
-              required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
@@ -101,17 +117,36 @@ export function LoginPage() {
   );
 }
 
+type RegisterField = "organization_name" | "email" | "password";
+
 export function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [organization, setOrganization] = useState("");
+  const [clientErrors, setClientErrors] = useState<Errors<RegisterField>>({});
   const register = useStartSession("/v1/auth/register");
-  const errors = fieldErrors(register.error);
-  const hasFieldErrors = Object.keys(errors).length > 0;
+
+  // What the server says about a field wins only when the browser found nothing.
+  const serverErrors = fieldErrors(register.error) as Errors<RegisterField>;
+  const errors = hasErrors(clientErrors) ? clientErrors : serverErrors;
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    register.mutate({ email, password, organization_name: organization });
+    const found = collect({
+      organization_name: requiredText(organization, "the name of your organisation"),
+      email: emailAddress(email),
+      password: newPassword(password),
+    });
+    setClientErrors(found);
+    if (hasErrors(found)) {
+      register.reset();
+      return;
+    }
+    register.mutate({
+      email: email.trim(),
+      password,
+      organization_name: organization.trim(),
+    });
   }
 
   return (
@@ -132,7 +167,6 @@ export function RegisterPage() {
             <Input
               {...props}
               autoComplete="organization"
-              required
               value={organization}
               onChange={(event) => setOrganization(event.target.value)}
             />
@@ -144,7 +178,6 @@ export function RegisterPage() {
               {...props}
               type="email"
               autoComplete="email"
-              required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
@@ -156,14 +189,12 @@ export function RegisterPage() {
               {...props}
               type="password"
               autoComplete="new-password"
-              required
-              minLength={10}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
           )}
         </Field>
-        {register.isError && !hasFieldErrors && <ErrorState error={register.error} />}
+        {register.isError && !hasErrors(errors) && <ErrorState error={register.error} />}
         <Button type="submit" variant="primary" className="w-full" busy={register.isPending}>
           Create account
         </Button>

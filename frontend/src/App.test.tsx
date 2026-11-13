@@ -99,7 +99,13 @@ describe("App", () => {
         body: {
           code: "validation_error",
           message: "The request is not valid.",
-          details: [{ loc: ["body", "password"], msg: "String should have at least 10 characters" }],
+          details: [
+            {
+              loc: ["body", "password"],
+              msg: "String should have at least 10 characters",
+              type: "string_too_short",
+            },
+          ],
         },
       },
     });
@@ -107,12 +113,13 @@ describe("App", () => {
 
     await user.type(await screen.findByLabelText("Organisation name"), "Acme");
     await user.type(screen.getByLabelText("Email"), "dev@example.com");
-    await user.type(screen.getByLabelText("Password"), "short");
+    await user.type(screen.getByLabelText("Password"), "long enough for the browser");
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
+    // The server's developer wording is translated for the person reading it.
     await waitFor(() =>
       expect(screen.getByLabelText("Password")).toHaveAccessibleDescription(
-        "String should have at least 10 characters",
+        "Use at least 10 characters.",
       ),
     );
   });

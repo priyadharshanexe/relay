@@ -117,6 +117,8 @@ export interface Attempt {
 
 export interface DeliveryDetail extends Delivery {
   payload: Record<string, unknown>;
+  endpoint_status: EndpointStatus;
+  endpoint_breaker_state: BreakerState;
   attempt_log: Attempt[];
 }
 

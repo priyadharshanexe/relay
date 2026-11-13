@@ -175,7 +175,9 @@ export function EmptyState({
 /** Shown when a request failed. Includes the request id, which is what support
  *  needs to find this exact request in the server logs. */
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
-  const requestId = error instanceof ApiError ? error.requestId : null;
+  // The request id helps support trace a failure that is ours. For an ordinary
+  // mistake (wrong password, invalid input) it is only noise.
+  const requestId = error instanceof ApiError && error.status >= 500 ? error.requestId : null;
   return (
     <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
       <p className="text-sm font-medium text-red-800">{errorMessage(error)}</p>
@@ -225,12 +227,15 @@ interface ModalProps {
   title: string;
   open: boolean;
   onClose: () => void;
+  /** false: only a button inside can close it. Use when closing by accident
+   *  would lose something, such as a secret that is shown once. */
+  dismissible?: boolean;
   children: ReactNode;
 }
 
 /** A modal dialog: announced as a dialog to screen readers, closes on Escape or
  *  a click outside, moves focus inside when it opens and back when it closes. */
-export function Modal({ title, open, onClose, children }: ModalProps) {
+export function Modal({ title, open, onClose, dismissible = true, children }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -243,21 +248,21 @@ export function Modal({ title, open, onClose, children }: ModalProps) {
     (first ?? panel.current)?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && dismissible) onClose();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open, onClose, dismissible]);
 
   if (!open) return null;
   return (
     <div
       className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-slate-900/50 px-4 py-16"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (dismissible && event.target === event.currentTarget) onClose();
       }}
     >
       <div
@@ -272,14 +277,16 @@ export function Modal({ title, open, onClose, children }: ModalProps) {
           <h2 id={titleId} className="text-base font-semibold text-slate-900">
             {title}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-          >
-            ✕
-          </button>
+          {dismissible && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            >
+              ✕
+            </button>
+          )}
         </div>
         <div className="px-5 py-4">{children}</div>
       </div>

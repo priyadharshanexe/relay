@@ -126,13 +126,65 @@ export function errorMessage(error: unknown): string {
   return "Something went wrong.";
 }
 
-/** Per-field messages from a 422 response, keyed by the field name. */
+interface ValidationDetail {
+  loc?: unknown[];
+  msg?: string;
+  type?: string;
+}
+
+const LOCATIONS = new Set(["body", "query", "path", "header"]);
+
+/** The server's validator speaks to developers ("String should have at least 1
+ *  character"). Say the same thing the way a person would. */
+function friendlyMessage(detail: ValidationDetail): string {
+  const message = detail.msg ?? "This value is not valid.";
+  const number = (pattern: RegExp) => pattern.exec(message)?.[1];
+  switch (detail.type) {
+    case "missing":
+      return "This is required.";
+    case "string_too_short": {
+      const least = number(/at least (\d+)/);
+      return least && least !== "1" ? `Use at least ${least} characters.` : "This is required.";
+    }
+    case "string_too_long": {
+      const most = number(/at most (\d+)/);
+      return most ? `Use at most ${most} characters.` : "This is too long.";
+    }
+    case "string_pattern_mismatch":
+      return "This contains characters that are not allowed. Use letters, numbers, dots, dashes and underscores.";
+    case "greater_than_equal": {
+      const least = number(/equal to (-?\d+)/);
+      return least ? `Enter ${least} or more.` : message;
+    }
+    case "less_than_equal": {
+      const most = number(/equal to (-?\d+)/);
+      return most ? `Enter ${most} or less.` : message;
+    }
+    case "int_parsing":
+    case "int_type":
+    case "int_from_float":
+      return "Enter a whole number.";
+    case "too_long":
+      return "There are too many items.";
+    case "value_error":
+      return /email/i.test(message)
+        ? "Enter a valid email address, like name@example.com."
+        : message.replace(/^Value error, /, "");
+    default:
+      return message;
+  }
+}
+
+/** Per-field messages from a 422 response, keyed by the field name. An error on
+ *  one item of a list (loc: body, event_types, 1) belongs to the list's field. */
 export function fieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof ApiError) || !Array.isArray(error.details)) return {};
   const result: Record<string, string> = {};
-  for (const item of error.details as { loc?: unknown[]; msg?: string }[]) {
-    const field = item.loc?.[item.loc.length - 1];
-    if (typeof field === "string" && item.msg) result[field] = item.msg;
+  for (const item of error.details as ValidationDetail[]) {
+    const field = item.loc?.find(
+      (part): part is string => typeof part === "string" && !LOCATIONS.has(part),
+    );
+    if (field && !(field in result)) result[field] = friendlyMessage(item);
   }
   return result;
 }
