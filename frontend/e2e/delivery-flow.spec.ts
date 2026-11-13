@@ -16,7 +16,7 @@ test("a failing delivery is dead-lettered, then replayed successfully", async ({
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("an-end-to-end-test-passphrase");
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page.getByRole("heading", { name: "Endpoints" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Endpoints", exact: true })).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
   });
 
