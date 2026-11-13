@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { DeliveryTable, STATUS_OPTIONS, useEndpoints } from "../components/delivery";
@@ -75,6 +75,59 @@ function useDeliveries(filters: Filters) {
   });
 }
 
+/**
+ * A text filter that keeps what is being typed in its own state and only writes
+ * to the URL once typing pauses.
+ *
+ * Two things go wrong if the input is bound straight to the URL:
+ *
+ * 1. The URL updates a moment *after* each key. Anything typed in that moment
+ *    is applied to a stale value, so keystrokes are lost.
+ * 2. Every letter would ask the API for a new page of results.
+ *
+ * The subtle part is the way back. After we write "ord" to the URL, the URL
+ * reports "ord" to us a little later. By then the box may say "order". That
+ * report is only our own write coming home, so it must NOT overwrite the box.
+ * Only a value we did not write ourselves (Clear filters, the Back button)
+ * replaces what is in the box.
+ */
+export function DebouncedInput({
+  value,
+  onCommit,
+  delayMs = 350,
+  ...rest
+}: {
+  value: string;
+  onCommit: (value: string) => void;
+  delayMs?: number;
+} & Omit<React.ComponentProps<typeof Input>, "value" | "onChange">) {
+  const [draft, setDraft] = useState(value);
+  // The last value we know the URL has, or that we asked it to have.
+  const lastWritten = useRef(value);
+  // Always call the newest onCommit, without restarting the timer when the
+  // parent re-renders and hands us a new function.
+  const commit = useRef(onCommit);
+  commit.current = onCommit;
+
+  useEffect(() => {
+    if (value === lastWritten.current) return; // our own write coming back
+    lastWritten.current = value;
+    setDraft(value);
+  }, [value]);
+
+  useEffect(() => {
+    const next = draft.trim();
+    if (next === lastWritten.current) return;
+    const timer = setTimeout(() => {
+      lastWritten.current = next;
+      commit.current(next);
+    }, delayMs);
+    return () => clearTimeout(timer);
+  }, [draft, delayMs]);
+
+  return <Input {...rest} value={draft} onChange={(event) => setDraft(event.target.value)} />;
+}
+
 function FilterBar({
   filters,
   setFilter,
@@ -123,11 +176,11 @@ function FilterBar({
       </Field>
       <Field label="Event type">
         {(props) => (
-          <Input
+          <DebouncedInput
             {...props}
             placeholder="order.paid"
             value={filters.event_type ?? ""}
-            onChange={(event) => setFilter("event_type", event.target.value.trim())}
+            onCommit={(value) => setFilter("event_type", value)}
           />
         )}
       </Field>
