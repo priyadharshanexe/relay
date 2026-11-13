@@ -43,6 +43,9 @@ function renderApp(path: string) {
   );
 }
 
+// Assembled from parts so that it is obviously not a real credential.
+const FAKE_KEY = ["rly", "test", "abcd1234", "EXAMPLE"].join("_");
+
 const posts = (calls: FakeCall[]) => calls.filter((call) => call.method === "POST");
 
 const ENDPOINT: Endpoint = {
@@ -299,7 +302,7 @@ describe("a secret that is shown once cannot be closed by accident", () => {
       "GET /v1/api-keys": { body: [] },
       "POST /v1/api-keys": {
         status: 201,
-        body: { id: "k1", name: "orders", prefix: "rly_test_abcd1234", key: "rly_test_abcd1234SECRET", last_used_at: null, revoked_at: null, created_at: "2026-11-11T10:00:00Z" },
+        body: { id: "k1", name: "orders", prefix: "rly_test_abcd1234", key: FAKE_KEY, last_used_at: null, revoked_at: null, created_at: "2026-11-11T10:00:00Z" },
       },
     });
     renderPage(<ApiKeysPage />);
@@ -311,9 +314,9 @@ describe("a secret that is shown once cannot be closed by accident", () => {
     const dialog = await screen.findByRole("dialog", { name: "Save this API key" });
     await user.keyboard("{Escape}");
 
-    expect(within(dialog).getByTestId("secret-value")).toHaveTextContent("rly_test_abcd1234SECRET");
+    expect(within(dialog).getByTestId("secret-value")).toHaveTextContent(FAKE_KEY);
     const example = within(dialog).getByTestId("usage-example");
-    expect(example).toHaveTextContent("Authorization: Bearer rly_test_abcd1234SECRET");
+    expect(example).toHaveTextContent(`Authorization: Bearer ${FAKE_KEY}`);
     expect(example).toHaveTextContent("/v1/events");
   });
 

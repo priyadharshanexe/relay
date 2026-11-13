@@ -2,3 +2,7 @@
 # literal. It never protected real data: production refuses to start with it
 # (see Settings._production_needs_real_secrets), and it is now derived in code.
 a046c6974db10ad46fa13285f85622f4adfafcbe:relay/core/config.py:generic-api-key:15
+
+# A made-up API key in a frontend test. It was never issued by any system; the
+# test now assembles its fake value from parts.
+70ffff8a4a9290b44bbe21cfb16c28449de8161c:frontend/src/qa-regressions.test.tsx:generic-api-key:302
