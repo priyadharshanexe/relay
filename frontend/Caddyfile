@@ -12,8 +12,20 @@
 		}
 	}
 
+	# Built files carry a fingerprint of their contents in the name
+	# (index-Cl-yst-7.js), so a given name never changes: cache them for a year.
+	handle /assets/* {
+		root * /srv
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
 	handle {
 		root * /srv
+		# index.html names the current asset files, so it must be re-checked on
+		# every visit. Without this a browser may keep showing the previous
+		# release after a deploy.
+		header Cache-Control "no-cache"
 		# The dashboard does its own routing, so unknown paths get index.html.
 		try_files {path} /index.html
 		file_server
