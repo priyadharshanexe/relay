@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { SESSION_QUERY_KEY } from "../auth/AuthProvider";
-import { Button, ErrorState, Field, Input } from "../components/ui";
+import { Button, ErrorState, Field, Input, LoadingState } from "../components/ui";
 import { api, fieldErrors, setCurrentOrgId } from "../lib/api";
-import type { Session } from "../lib/types";
+import type { InvitationInfo, Session } from "../lib/types";
 import {
   collect,
   emailAddress,
@@ -14,7 +14,17 @@ import {
   requiredText,
 } from "../lib/validate";
 
-function AuthShell({ title, children, footer }: { title: string; children: ReactNode; footer: ReactNode }) {
+const LINK = "font-medium text-brand-600 hover:text-brand-700";
+
+export function AuthShell({
+  title,
+  children,
+  footer,
+}: {
+  title: string;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
@@ -31,10 +41,29 @@ function AuthShell({ title, children, footer }: { title: string; children: React
           <h1 className="mb-5 text-lg font-semibold text-slate-900">{title}</h1>
           {children}
         </div>
-        <p className="mt-4 text-center text-sm text-slate-600">{footer}</p>
+        {footer && <p className="mt-4 text-center text-sm text-slate-600">{footer}</p>}
       </div>
     </div>
   );
+}
+
+/** Loads what an invitation link is for. Needs no login. */
+export function useInvitation(token: string | null) {
+  return useQuery({
+    queryKey: ["invitation", token],
+    queryFn: () =>
+      api<InvitationInfo>(`/v1/invitations/${encodeURIComponent(token ?? "")}`, {
+        skipRefresh: true,
+      }),
+    enabled: token !== null,
+    retry: false,
+    staleTime: 60_000,
+  });
+}
+
+/** Carry the invitation along when moving between "log in" and "sign up". */
+function withInvite(path: string, invite: string | null): string {
+  return invite ? `${path}?invite=${encodeURIComponent(invite)}` : path;
 }
 
 /** Both forms end the same way: the API set the session cookies, so store the
@@ -54,6 +83,8 @@ function useStartSession(path: string) {
 }
 
 export function LoginPage() {
+  const [params] = useSearchParams();
+  const invite = params.get("invite");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Errors<"email" | "password">>({});
@@ -79,13 +110,18 @@ export function LoginPage() {
       footer={
         <>
           New to Relay?{" "}
-          <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
+          <Link to={withInvite("/register", invite)} className={LINK}>
             Create an account
           </Link>
         </>
       }
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
+        {invite && (
+          <p role="note" className="rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+            Log in to accept your invitation.
+          </p>
+        )}
         <Field label="Email" error={errors.email}>
           {(props) => (
             <Input
@@ -120,6 +156,12 @@ export function LoginPage() {
 type RegisterField = "organization_name" | "email" | "password";
 
 export function RegisterPage() {
+  const [params] = useSearchParams();
+  const invite = params.get("invite");
+  // Someone who was invited joins that organisation: they do not name a new one,
+  // and the email address is the one the invitation was sent to.
+  const invitation = useInvitation(invite);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [organization, setOrganization] = useState("");
@@ -130,11 +172,39 @@ export function RegisterPage() {
   const serverErrors = fieldErrors(register.error) as Errors<RegisterField>;
   const errors = hasErrors(clientErrors) ? clientErrors : serverErrors;
 
+  const footer = (
+    <>
+      Already have an account?{" "}
+      <Link to={withInvite("/login", invite)} className={LINK}>
+        Log in
+      </Link>
+    </>
+  );
+
+  if (invite && invitation.isPending) return <LoadingState label="Loading your invitation…" />;
+  if (invite && invitation.isError) {
+    return (
+      <AuthShell title="Create your account" footer={footer}>
+        <ErrorState error={invitation.error} />
+        <p className="mt-4 text-sm text-slate-600">
+          Ask the person who invited you for a new link, or{" "}
+          <Link to="/register" className={LINK}>
+            create your own organisation
+          </Link>
+          .
+        </p>
+      </AuthShell>
+    );
+  }
+  const invited = invite ? invitation.data : undefined;
+
   function submit(event: FormEvent) {
     event.preventDefault();
     const found = collect({
-      organization_name: requiredText(organization, "the name of your organisation"),
-      email: emailAddress(email),
+      organization_name: invited
+        ? undefined
+        : requiredText(organization, "the name of your organisation"),
+      email: invited ? undefined : emailAddress(email),
       password: newPassword(password),
     });
     setClientErrors(found);
@@ -142,43 +212,49 @@ export function RegisterPage() {
       register.reset();
       return;
     }
-    register.mutate({
-      email: email.trim(),
-      password,
-      organization_name: organization.trim(),
-    });
+    register.mutate(
+      invited && invite
+        ? { email: invited.email, password, invitation_token: invite }
+        : { email: email.trim(), password, organization_name: organization.trim() },
+    );
   }
 
   return (
     <AuthShell
-      title="Create your account"
-      footer={
-        <>
-          Already have an account?{" "}
-          <Link to="/login" className="font-medium text-brand-600 hover:text-brand-700">
-            Log in
-          </Link>
-        </>
-      }
+      title={invited ? `Join ${invited.organization_name}` : "Create your account"}
+      footer={footer}
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
-        <Field label="Organisation name" error={errors.organization_name}>
-          {(props) => (
-            <Input
-              {...props}
-              autoComplete="organization"
-              value={organization}
-              onChange={(event) => setOrganization(event.target.value)}
-            />
-          )}
-        </Field>
-        <Field label="Email" error={errors.email}>
+        {invited ? (
+          <p className="text-sm text-slate-600">
+            You were invited as a <strong>{invited.role}</strong>. Choose a password to create your
+            account.
+          </p>
+        ) : (
+          <Field label="Organisation name" error={errors.organization_name}>
+            {(props) => (
+              <Input
+                {...props}
+                autoComplete="organization"
+                value={organization}
+                onChange={(event) => setOrganization(event.target.value)}
+              />
+            )}
+          </Field>
+        )}
+        <Field
+          label="Email"
+          hint={invited ? "The invitation was sent to this address." : undefined}
+          error={errors.email}
+        >
           {(props) => (
             <Input
               {...props}
               type="email"
               autoComplete="email"
-              value={email}
+              readOnly={invited !== undefined}
+              className={invited ? "bg-slate-50 text-slate-600" : undefined}
+              value={invited ? invited.email : email}
               onChange={(event) => setEmail(event.target.value)}
             />
           )}
@@ -196,7 +272,7 @@ export function RegisterPage() {
         </Field>
         {register.isError && !hasErrors(errors) && <ErrorState error={register.error} />}
         <Button type="submit" variant="primary" className="w-full" busy={register.isPending}>
-          Create account
+          {invited ? "Create account and join" : "Create account"}
         </Button>
       </form>
     </AuthShell>

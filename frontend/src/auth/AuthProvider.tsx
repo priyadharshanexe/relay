@@ -5,7 +5,9 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { ApiError, api, getCurrentOrgId, setCurrentOrgId } from "../lib/api";
@@ -16,6 +18,8 @@ interface AuthContextValue {
   organization: Organization;
   /** Owners and developers can change things; viewers can only look. */
   canEdit: boolean;
+  /** Only owners manage the team and the organisation itself. */
+  isOwner: boolean;
   switchOrganization: (orgId: string) => void;
   logout: () => Promise<void>;
 }
@@ -51,6 +55,41 @@ export function useSessionQuery() {
   });
 }
 
+/** Log out here, and tell the other tabs of this browser to do the same. */
+export function useLogout(): () => Promise<void> {
+  const queryClient = useQueryClient();
+  return useCallback(async () => {
+    await api<void>("/v1/auth/logout", { method: "POST", skipRefresh: true }).catch(() => undefined);
+    endSessionLocally(queryClient);
+    try {
+      localStorage.setItem(LOGOUT_SIGNAL_KEY, String(Date.now()));
+    } catch {
+      // Storage can be unavailable (private mode); this tab is logged out anyway.
+    }
+  }, [queryClient]);
+}
+
+/** Shown to someone who is logged in but belongs to no organisation, which
+ *  happens when they are removed from their only one. */
+function NoOrganization({ email, onLogout }: { email: string; onLogout: () => void }) {
+  return (
+    <div className="mx-auto max-w-md px-4 py-16 text-center">
+      <h1 className="text-lg font-semibold text-slate-900">You are not in any organisation</h1>
+      <p className="mt-2 text-sm text-slate-600">
+        <span className="font-medium">{email}</span> no longer belongs to an organisation. Ask an
+        owner to send you an invitation link, then open it while logged in.
+      </p>
+      <button
+        type="button"
+        onClick={onLogout}
+        className="mt-6 rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
+      >
+        Log out
+      </button>
+    </div>
+  );
+}
+
 function pickOrganization(session: Session, preferredId: string | null): Organization | null {
   return (
     session.organizations.find((org) => org.id === preferredId) ?? session.organizations[0] ?? null
@@ -62,13 +101,46 @@ export function AuthProvider({ session, children }: { session: Session; children
   const [orgId, setOrgId] = useState<string | null>(() => getCurrentOrgId());
   const organization = pickOrganization(session, orgId);
 
+  const organizationId = organization?.id ?? null;
+
   // Keep the stored id in step with what we actually use, so the API client
   // sends the matching X-Org-ID header.
-  if (organization && getCurrentOrgId() !== organization.id) setCurrentOrgId(organization.id);
+  //
+  // In a layout effect, not during render: React may render and then throw the
+  // result away, and a discarded render must not overwrite the stored choice.
+  // Layout effects still run before the pages below start loading their data.
+  const shownOrgId = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (organizationId === null) return;
+    if (getCurrentOrgId() !== organizationId) setCurrentOrgId(organizationId);
+    if (shownOrgId.current !== null && shownOrgId.current !== organizationId) {
+      // The organisation changed under us (for example we were removed from the
+      // one on screen). What is loaded belongs to the old one: load it again.
+      void queryClient.resetQueries({ predicate: (query) => query.queryKey[0] !== "session" });
+    }
+    shownOrgId.current = organizationId;
+  }, [organizationId, queryClient]);
+
+  // "No such organisation" on any request means the list of organisations we
+  // hold is out of date: we were removed from this one while the page was open.
+  // Ask again who we are, and the screen follows from the answer.
+  useEffect(
+    () =>
+      queryClient.getQueryCache().subscribe((event) => {
+        if (event.type !== "updated" || event.action.type !== "error") return;
+        if (event.query.queryKey[0] === "session") return;
+        const error: unknown = event.action.error;
+        if (error instanceof ApiError && error.code === "organization_not_found") {
+          void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+        }
+      }),
+    [queryClient],
+  );
 
   const switchOrganization = useCallback(
     (nextId: string) => {
       setCurrentOrgId(nextId);
+      shownOrgId.current = nextId;
       setOrgId(nextId);
       // Everything on screen belongs to the previous organisation: drop it all
       // except the session itself.
@@ -77,15 +149,7 @@ export function AuthProvider({ session, children }: { session: Session; children
     [queryClient],
   );
 
-  const logout = useCallback(async () => {
-    await api<void>("/v1/auth/logout", { method: "POST", skipRefresh: true }).catch(() => undefined);
-    endSessionLocally(queryClient);
-    try {
-      localStorage.setItem(LOGOUT_SIGNAL_KEY, String(Date.now()));
-    } catch {
-      // Storage can be unavailable (private mode); this tab is logged out anyway.
-    }
-  }, [queryClient]);
+  const logout = useLogout();
 
   // Logging out in one tab must log out every tab. The browser fires "storage"
   // in the *other* tabs when a value changes, which is exactly what is needed.
@@ -103,6 +167,7 @@ export function AuthProvider({ session, children }: { session: Session; children
         session,
         organization,
         canEdit: organization.role !== "viewer",
+        isOwner: organization.role === "owner",
         switchOrganization,
         logout,
       },
@@ -110,7 +175,7 @@ export function AuthProvider({ session, children }: { session: Session; children
   );
 
   if (!value) {
-    return <p className="p-8 text-sm text-slate-600">You are not a member of any organisation.</p>;
+    return <NoOrganization email={session.user.email} onLogout={() => void logout()} />;
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

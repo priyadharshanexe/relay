@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { SecretReveal } from "../components/SecretReveal";
 import {
+  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -16,10 +19,12 @@ import {
 } from "../components/ui";
 import { api, fieldErrors } from "../lib/api";
 import { timeAgo } from "../lib/format";
-import type { Receiver, ReceiverMode } from "../lib/types";
+import type { Endpoint, EndpointCreated, Receiver, ReceiverMode } from "../lib/types";
 import { requiredText } from "../lib/validate";
 
 const RECEIVERS = ["receivers"] as const;
+// The same list the Endpoints page loads, so the two pages share one copy.
+const ENDPOINTS = ["endpoints"] as const;
 
 export const MODES: { value: ReceiverMode; label: string; explain: string }[] = [
   { value: "ok", label: "Succeed (200)", explain: "Accepts every webhook." },
@@ -33,7 +38,16 @@ export const MODES: { value: ReceiverMode; label: string; explain: string }[] = 
   { value: "timeout", label: "Never respond", explain: "Holds the connection until Relay gives up." },
 ];
 
-function ReceiverRow({ receiver, canEdit }: { receiver: Receiver; canEdit: boolean }) {
+function ReceiverRow({
+  receiver,
+  canEdit,
+  connected,
+}: {
+  receiver: Receiver;
+  canEdit: boolean;
+  /** Whether an endpoint already delivers to this receiver. Unknown while loading. */
+  connected: boolean | undefined;
+}) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -46,6 +60,20 @@ function ReceiverRow({ receiver, canEdit }: { receiver: Receiver; canEdit: boole
   const remove = useMutation({
     mutationFn: () => api<void>(`/v1/receivers/${receiver.id}`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: RECEIVERS }),
+  });
+
+  // One click instead of: copy the URL, go to Endpoints, paste it into a form.
+  const [secret, setSecret] = useState<string | null>(null);
+  const createEndpoint = useMutation({
+    mutationFn: () =>
+      api<EndpointCreated>("/v1/endpoints", {
+        method: "POST",
+        body: { url: receiver.url, description: `Test receiver: ${receiver.name}` },
+      }),
+    onSuccess: async (endpoint) => {
+      setSecret(endpoint.secret);
+      await queryClient.invalidateQueries({ queryKey: ENDPOINTS });
+    },
   });
 
   async function copyUrl() {
@@ -73,6 +101,36 @@ function ReceiverRow({ receiver, canEdit }: { receiver: Receiver; canEdit: boole
               {copied ? "Copied" : "Copy URL"}
             </Button>
           </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {connected && (
+              <>
+                <Badge tone="green">Endpoint connected</Badge>
+                <Link to="/endpoints" className="text-xs font-medium text-brand-700 hover:underline">
+                  View endpoints
+                </Link>
+              </>
+            )}
+            {connected === false && canEdit && (
+              <Button
+                size="sm"
+                variant="primary"
+                busy={createEndpoint.isPending}
+                onClick={() => createEndpoint.mutate()}
+              >
+                Create endpoint
+              </Button>
+            )}
+            {connected === false && (
+              <span className="text-xs text-slate-500">
+                No endpoint delivers here yet{canEdit ? "." : ". Ask an owner or developer to add one."}
+              </span>
+            )}
+          </div>
+          {createEndpoint.isError && (
+            <div className="mt-2">
+              <ErrorState error={createEndpoint.error} />
+            </div>
+          )}
           <p className="mt-2 text-xs text-slate-500">
             {receiver.requests_received === 0
               ? "No requests received yet"
@@ -124,6 +182,31 @@ function ReceiverRow({ receiver, canEdit }: { receiver: Receiver; canEdit: boole
       >
         Endpoints pointing at <strong>{receiver.name}</strong> will start failing.
       </ConfirmDialog>
+      <Modal
+        title="Endpoint created"
+        open={secret !== null}
+        onClose={() => setSecret(null)}
+        dismissible={false}
+      >
+        {secret && (
+          <>
+            <p className="mb-3 text-sm text-slate-600">
+              Events now go to <strong>{receiver.name}</strong>. Open Endpoints and use "Send test
+              event" to try it.
+            </p>
+            <SecretReveal label="Signing secret for the new endpoint" secret={secret} />
+            <p className="mt-3 text-sm text-slate-600">
+              The test receiver does not need it. Keep it only if you want to check signatures
+              yourself.
+            </p>
+            <div className="mt-5 flex justify-end">
+              <Button variant="primary" onClick={() => setSecret(null)}>
+                I have saved it
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
     </li>
   );
 }
@@ -139,6 +222,12 @@ export function ReceiversPage() {
     queryFn: () => api<Receiver[]>("/v1/receivers"),
     refetchInterval: 5_000, // the request counters change as deliveries arrive
   });
+
+  const endpoints = useQuery({
+    queryKey: ENDPOINTS,
+    queryFn: () => api<Endpoint[]>("/v1/endpoints"),
+  });
+  const endpointUrls = endpoints.data && new Set(endpoints.data.map((endpoint) => endpoint.url));
 
   const create = useMutation({
     mutationFn: () =>
@@ -192,7 +281,12 @@ export function ReceiversPage() {
         <Card>
           <ul className="divide-y divide-slate-200">
             {receivers.data.map((receiver) => (
-              <ReceiverRow key={receiver.id} receiver={receiver} canEdit={canEdit} />
+              <ReceiverRow
+                key={receiver.id}
+                receiver={receiver}
+                canEdit={canEdit}
+                connected={endpointUrls?.has(receiver.url)}
+              />
             ))}
           </ul>
         </Card>

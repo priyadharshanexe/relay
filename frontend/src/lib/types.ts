@@ -141,3 +141,31 @@ export interface LiveUpdate {
   duration_ms: number;
   at: string;
 }
+
+export interface Member {
+  user_id: string;
+  email: string;
+  role: Role;
+  joined_at: string;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  role: Role;
+  expires_at: string;
+  created_at: string;
+}
+
+/** The token goes in the invitation link and is shown once. */
+export interface InvitationCreated extends Invitation {
+  token: string;
+}
+
+/** What someone holding an invitation link is allowed to see. */
+export interface InvitationInfo {
+  organization_name: string;
+  email: string;
+  role: Role;
+  expires_at: string;
+}
