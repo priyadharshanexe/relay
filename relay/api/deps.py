@@ -171,6 +171,8 @@ def require_role(*allowed: Role) -> Callable[[OrgContext], Awaitable[OrgContext]
 
 # Owners and developers can change things; viewers can only look.
 EditorDep = Annotated[OrgContext, Depends(require_role(Role.OWNER, Role.DEVELOPER))]
+# Managing the team and the organisation itself is for owners only.
+OwnerDep = Annotated[OrgContext, Depends(require_role(Role.OWNER))]
 
 
 # --------------------------------------------------------------------- machines

@@ -9,7 +9,8 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
-from pydantic import BaseModel, EmailStr, Field, StringConstraints
+from pydantic import BaseModel, EmailStr, Field, StringConstraints, model_validator
+from pydantic_core import PydanticCustomError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.api.deps import (
@@ -28,6 +29,7 @@ from relay.core.throttle import throttle
 from relay.db.models import User
 from relay.domain.enums import Role
 from relay.services import auth as auth_service
+from relay.services import members as member_service
 from relay.services.auth import SessionTokens
 
 router = APIRouter(prefix="/auth", tags=["auth"], dependencies=[Depends(verify_origin)])
@@ -42,9 +44,21 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: Password
     # Stripped first, so a name made only of spaces counts as empty.
-    organization_name: Annotated[
-        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
-    ]
+    organization_name: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+        | None
+    ) = None
+    # Someone who was invited joins that organisation instead of creating one.
+    invitation_token: Annotated[str, StringConstraints(min_length=1, max_length=200)] | None = None
+
+    @model_validator(mode="after")
+    def _organisation_or_invitation(self) -> "RegisterRequest":
+        if (self.organization_name is None) == (self.invitation_token is None):
+            raise PydanticCustomError(
+                "organization_or_invitation",
+                "Give an organisation name, or an invitation, but not both.",
+            )
+        return self
 
 
 class LoginRequest(BaseModel):
@@ -129,12 +143,22 @@ async def register(
         limit=settings.registrations_per_hour,
         window_seconds=3600,
     )
-    user = await auth_service.register(
-        session,
-        email=body.email,
-        password=body.password,
-        organization_name=body.organization_name,
-    )
+    if body.invitation_token is not None:
+        user = await member_service.register_with_invitation(
+            session,
+            token=body.invitation_token,
+            email=body.email,
+            password=body.password,
+            now=utc_now(),
+        )
+    else:
+        assert body.organization_name is not None  # noqa: S101 - guaranteed by the model
+        user = await auth_service.register(
+            session,
+            email=body.email,
+            password=body.password,
+            organization_name=body.organization_name,
+        )
     tokens = await auth_service.start_session(session, user, settings, now=utc_now())
     _set_session_cookies(response, tokens, settings)
     return await _session_out(session, user)

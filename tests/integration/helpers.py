@@ -35,7 +35,7 @@ async def login(client: AsyncClient, email: str, password: str = PASSWORD) -> di
 
 
 async def add_member(session: AsyncSession, *, user_id: str, org_id: str, role: str) -> None:
-    """Put an existing user into an organisation (there is no invitation API yet)."""
+    """Put an existing user into an organisation directly, skipping the invitation."""
     session.add(Membership(user_id=uuid.UUID(user_id), org_id=uuid.UUID(org_id), role=role))
     await session.commit()
 

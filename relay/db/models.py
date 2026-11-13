@@ -109,6 +109,32 @@ class Membership(Base):
     )
 
 
+class Invitation(Base):
+    """An invitation to join an organisation, sent as a link.
+
+    Like an API key, only the hash of the link's token is stored. It is bound to
+    one email address, expires, and works once.
+    """
+
+    __tablename__ = "invitations"
+
+    id: Mapped[UuidPk]
+    org_id: Mapped[uuid.UUID] = mapped_column(_fk("organizations.id"), index=True)
+    email: Mapped[str] = mapped_column(String(320))
+    role: Mapped[str] = mapped_column(String(20))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    invited_by: Mapped[uuid.UUID | None] = mapped_column(_fk("users.id", ondelete="SET NULL"))
+    expires_at: Mapped[datetime]
+    accepted_at: Mapped[datetime | None]
+    revoked_at: Mapped[datetime | None]
+    created_at: Mapped[CreatedAt]
+
+    __table_args__ = (
+        CheckConstraint(_one_of("role", Role), name="role_valid"),
+        CheckConstraint("email = lower(email)", name="email_lowercase"),
+    )
+
+
 class ApiKey(Base):
     __tablename__ = "api_keys"
 

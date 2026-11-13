@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     # delivery timeout.
     receiver_hold_seconds: float | None = Field(default=None, gt=0, le=120)
 
+    # How long an invitation link stays valid.
+    invitation_ttl_days: int = Field(default=7, ge=1, le=30)
+
     # Abuse limits, per client IP
     login_attempts_per_minute: int = Field(default=10, ge=1)
     registrations_per_hour: int = Field(default=10, ge=1)

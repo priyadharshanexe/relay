@@ -16,6 +16,7 @@ from relay.api import (
     endpoints,
     events,
     health,
+    invitations,
     metrics,
     orgs,
     receivers,
@@ -76,6 +77,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1 = APIRouter(prefix="/v1")
     v1.include_router(auth.router)
     v1.include_router(orgs.router)
+    v1.include_router(invitations.router)
     v1.include_router(api_keys.router)
     v1.include_router(endpoints.router)
     v1.include_router(events.router)
