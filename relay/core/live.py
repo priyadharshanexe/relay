@@ -11,6 +11,7 @@ remains the source of truth, and the dashboard reads history from it.
 """
 
 import json
+import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
@@ -42,17 +43,27 @@ class LivePublisher:
 
 
 async def live_updates(
-    redis: Redis, org_id: uuid.UUID, *, heartbeat_seconds: float
+    redis: Redis,
+    org_id: uuid.UUID,
+    *,
+    heartbeat_seconds: float,
+    max_seconds: float | None = None,
 ) -> AsyncIterator[dict[str, Any] | None]:
     """Yield this organisation's updates as they happen.
 
     Yields ``None`` whenever ``heartbeat_seconds`` pass in silence, so the caller
     can send a keep-alive and notice a browser that has gone away.
+
+    Ends after ``max_seconds``. The caller's permission was checked once, when
+    the stream opened; a stream with no end would keep sending data long after
+    that person logged out or was removed. Ending it makes the browser
+    reconnect, and reconnecting means being checked again.
     """
+    deadline = None if max_seconds is None else time.monotonic() + max_seconds
     pubsub = redis.pubsub()
     await pubsub.subscribe(channel_for(org_id))
     try:
-        while True:
+        while deadline is None or time.monotonic() < deadline:
             message = await pubsub.get_message(
                 ignore_subscribe_messages=True, timeout=heartbeat_seconds
             )

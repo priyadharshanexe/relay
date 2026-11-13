@@ -11,7 +11,7 @@ from relay.api.deps import EditorDep, OrgDep, SessionDep, utc_now
 from relay.api.endpoints import EventType
 from relay.api.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, Page, encode_cursor, newest_first
 from relay.db.models import Delivery
-from relay.domain.enums import DeliveryStatus, ErrorKind
+from relay.domain.enums import BreakerState, DeliveryStatus, EndpointStatus, ErrorKind
 from relay.services import deliveries as delivery_service
 from relay.services.deliveries import DeliveryFilter
 
@@ -48,6 +48,10 @@ class AttemptOut(BaseModel):
 
 class DeliveryDetail(DeliveryOut):
     payload: dict[str, Any]
+    # Why a delivery may be waiting: its endpoint is paused, or its circuit
+    # breaker is open because the receiver keeps failing.
+    endpoint_status: EndpointStatus
+    endpoint_breaker_state: BreakerState
     attempt_log: list[AttemptOut]
 
 
@@ -139,6 +143,8 @@ async def get_delivery(
     return DeliveryDetail(
         **_out(delivery, event.type, endpoint.url).model_dump(),
         payload=event.payload,
+        endpoint_status=EndpointStatus(endpoint.status),
+        endpoint_breaker_state=BreakerState(endpoint.breaker_state),
         attempt_log=[AttemptOut.model_validate(attempt) for attempt in attempts],
     )
 

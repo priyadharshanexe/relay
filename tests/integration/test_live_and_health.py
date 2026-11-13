@@ -89,6 +89,17 @@ async def test_silence_produces_heartbeats(redis: Redis) -> None:
     await feed.aclose()  # type: ignore[attr-defined]
 
 
+async def test_a_stream_ends_by_itself_so_permission_is_checked_again(redis: Redis) -> None:
+    """Found by testing: a feed opened before logging out kept running for ever."""
+    feed = live_updates(redis, uuid.uuid4(), heartbeat_seconds=0.05, max_seconds=0.3)
+
+    async with asyncio.timeout(3):
+        received = [update async for update in feed]
+
+    assert received  # it sent heartbeats while it lived
+    assert all(update is None for update in received)
+
+
 def test_sse_formatting() -> None:
     assert format_sse(None) == ": keep-alive\n\n"
     formatted = format_sse({"type": "delivery.attempt", "status": "dead"})

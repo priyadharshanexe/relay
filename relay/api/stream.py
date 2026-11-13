@@ -14,7 +14,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 
-from relay.api.deps import CurrentUser, RedisDep, SessionDep, resolve_membership
+from relay.api.deps import CurrentUser, RedisDep, SessionDep, SettingsDep, resolve_membership
 from relay.core.live import live_updates
 
 router = APIRouter(prefix="/stream", tags=["live feed"])
@@ -39,6 +39,7 @@ async def stream_deliveries(
     user: CurrentUser,
     session: SessionDep,
     redis: RedisDep,
+    settings: SettingsDep,
     # EventSource cannot set headers, so the organisation comes as a query parameter.
     org_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> StreamingResponse:
@@ -48,7 +49,15 @@ async def stream_deliveries(
     # now, or every open dashboard would pin one from the pool.
     await session.close()
     return StreamingResponse(
-        sse_stream(live_updates(redis, membership.org_id, heartbeat_seconds=HEARTBEAT_SECONDS)),
+        sse_stream(
+            live_updates(
+                redis,
+                membership.org_id,
+                heartbeat_seconds=HEARTBEAT_SECONDS,
+                # No stream outlives the access token that opened it.
+                max_seconds=settings.access_token_ttl_seconds,
+            )
+        ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

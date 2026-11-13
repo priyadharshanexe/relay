@@ -56,12 +56,12 @@ async def redis_is_ready(redis: Redis) -> bool:
     return True
 
 
-@router.get("/healthz")
+@router.api_route("/healthz", methods=["GET", "HEAD"])
 async def healthz() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
-@router.get("/readyz", responses={503: {"model": ReadinessResponse}})
+@router.api_route("/readyz", methods=["GET", "HEAD"], responses={503: {"model": ReadinessResponse}})
 async def readyz(
     response: Response,
     engine: Annotated[AsyncEngine, Depends(get_engine)],
