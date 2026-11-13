@@ -9,7 +9,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, StringConstraints
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from relay.api.deps import (
@@ -41,7 +41,10 @@ Password = Annotated[str, Field(min_length=10, max_length=128)]
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: Password
-    organization_name: str = Field(min_length=1, max_length=200)
+    # Stripped first, so a name made only of spaces counts as empty.
+    organization_name: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)
+    ]
 
 
 class LoginRequest(BaseModel):

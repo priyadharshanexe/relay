@@ -1,5 +1,6 @@
 """Event ingestion (API key) and browsing (dashboard)."""
 
+import json
 import uuid
 from datetime import datetime
 from typing import Annotated, Any
@@ -60,9 +61,34 @@ async def _read_body(request: Request, limit: int) -> bytes:
     return bytes(body)
 
 
+def _reject(message: str, error_type: str) -> AppError:
+    details = [{"loc": ["body", "payload"], "msg": message, "type": error_type}]
+    return AppError(422, "validation_error", "The request is not valid.", details)
+
+
+def _check_storable(payload: dict[str, Any]) -> None:
+    """Refuse payloads that are valid for Python but not for JSON or PostgreSQL.
+
+    Without this they fail deep inside the database driver and surface as a 500.
+    """
+    try:
+        # allow_nan=False: Infinity and NaN (e.g. from 1e999) are not JSON.
+        encoded = json.dumps(payload, allow_nan=False)
+    except ValueError as exc:
+        raise _reject(
+            "The payload contains a number that is not valid JSON (Infinity or NaN).",
+            "payload_not_finite",
+        ) from exc
+    if "\\u0000" in encoded:
+        # PostgreSQL's jsonb cannot store the NUL character.
+        raise _reject("The payload must not contain NUL characters.", "payload_nul_character")
+
+
 def _parse_event(body: bytes) -> EventIn:
     try:
-        return EventIn.model_validate_json(body)
+        event = EventIn.model_validate_json(body)
+        _check_storable(event.payload)
+        return event
     except ValidationError as exc:
         details = [
             {"loc": ["body", *error["loc"]], "msg": error["msg"], "type": error["type"]}

@@ -2,9 +2,10 @@
 
 import uuid
 from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from relay.api.deps import EditorDep, OrgDep, SessionDep, SettingsDep, utc_now
 from relay.services import api_keys as api_key_service
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/api-keys", tags=["api keys"])
 
 
 class CreateApiKeyRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 
 
 class ApiKeyOut(BaseModel):
