@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { SecretReveal } from "../components/SecretReveal";
 import {
@@ -17,6 +17,14 @@ import {
 } from "../components/ui";
 import { ApiError, api, fieldErrors } from "../lib/api";
 import { milliseconds, percent, timeAgo } from "../lib/format";
+import {
+  collect,
+  type Errors,
+  eventTypes as checkEventTypes,
+  hasErrors,
+  optionalRateLimit,
+  webhookUrl,
+} from "../lib/validate";
 import type {
   Endpoint,
   EndpointCreated,
@@ -87,15 +95,24 @@ function EndpointForm({
     },
   });
 
-  const errors = fieldErrors(save.error);
-  // The URL check (scheme, private addresses, ...) is not a per-field error from
-  // the validator, so attach it to the URL field ourselves.
+  const [clientErrors, setClientErrors] = useState<
+    Errors<"url" | "event_types" | "rate_limit_per_sec">
+  >({});
+  // The browser's own checks come first; the server's are shown only when the
+  // browser found nothing wrong.
+  const errors: Record<string, string | undefined> = hasErrors(clientErrors)
+    ? clientErrors
+    : fieldErrors(save.error);
+  // The server's URL check (private addresses, ...) is not a per-field error
+  // from the validator, so attach it to the URL field ourselves.
   const urlError =
     errors.url ??
-    (save.error instanceof ApiError && save.error.code === "invalid_endpoint_url"
+    (!hasErrors(clientErrors) &&
+    save.error instanceof ApiError &&
+    save.error.code === "invalid_endpoint_url"
       ? save.error.message
       : undefined);
-  const hasFieldError = Boolean(urlError) || Object.keys(errors).length > 0;
+  const hasFieldError = Boolean(urlError) || Object.values(errors).some(Boolean);
 
   function set<K extends keyof FormValues>(key: K) {
     return (event: { target: { value: string } }) =>
@@ -104,6 +121,16 @@ function EndpointForm({
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    const found = collect({
+      url: webhookUrl(values.url),
+      event_types: checkEventTypes(parseEventTypes(values.eventTypes)),
+      rate_limit_per_sec: optionalRateLimit(values.rateLimit),
+    });
+    setClientErrors(found);
+    if (hasErrors(found)) {
+      save.reset();
+      return;
+    }
     save.mutate();
   }
 
@@ -185,6 +212,13 @@ function EndpointRow({
   const [confirm, setConfirm] = useState<"rotate-secret" | "delete" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // A confirmation is news for a few seconds, then it is clutter.
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   const act = useMutation({
     mutationFn: (action: Action) =>
       action === "delete"
@@ -195,7 +229,13 @@ function EndpointRow({
       if (action === "rotate-secret") {
         onSecret("New signing secret", (result as RotatedSecret).secret);
       }
-      if (action === "test") setNotice("Test event queued.");
+      if (action === "test") {
+        setNotice(
+          endpoint.status === "active"
+            ? "Test event queued. See it under Deliveries."
+            : "Test event queued. It will be sent when this endpoint is resumed.",
+        );
+      }
       await queryClient.invalidateQueries({ queryKey: ENDPOINTS_KEY });
     },
   });
@@ -310,6 +350,9 @@ export function EndpointsPage() {
   const endpoints = useQuery({
     queryKey: ENDPOINTS_KEY,
     queryFn: () => api<Endpoint[]>("/v1/endpoints"),
+    // Status changes on its own: a circuit breaker opens and closes with no
+    // action on this page.
+    refetchInterval: 10_000,
   });
   const health = useQuery({
     queryKey: HEALTH_KEY,
@@ -377,7 +420,12 @@ export function EndpointsPage() {
         )}
       </Modal>
 
-      <Modal title="Save this secret" open={secret !== null} onClose={() => setSecret(null)}>
+      <Modal
+        title="Save this secret"
+        open={secret !== null}
+        onClose={() => setSecret(null)}
+        dismissible={false}
+      >
         {secret && (
           <>
             <SecretReveal label={secret.title} secret={secret.value} />

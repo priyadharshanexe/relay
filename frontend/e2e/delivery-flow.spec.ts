@@ -50,7 +50,7 @@ test("a failing delivery is dead-lettered, then replayed successfully", async ({
 
   await test.step("send an event", async () => {
     await page.getByRole("button", { name: "Send test event" }).click();
-    await expect(page.getByText("Test event queued.")).toBeVisible();
+    await expect(page.getByText(/Test event queued\./)).toBeVisible();
   });
 
   await test.step("the delivery fails every attempt and is dead-lettered", async () => {
@@ -60,7 +60,7 @@ test("a failing delivery is dead-lettered, then replayed successfully", async ({
       await page.reload();
       await expect(page.getByRole("link", { name: "relay.test" })).toBeVisible({ timeout: 2_000 });
     }).toPass({ timeout: 45_000 });
-    await expect(page.getByText("http_status: the receiver answered HTTP 500")).toBeVisible();
+    await expect(page.getByText("The receiver answered HTTP 500")).toBeVisible();
 
     await page.getByRole("link", { name: "relay.test" }).click();
     await expect(page.getByText("Dead", { exact: true })).toBeVisible();
@@ -117,7 +117,7 @@ test("a failing delivery is dead-lettered, then replayed successfully", async ({
     const second = await page.context().newPage();
     await second.goto("/endpoints");
     await second.getByRole("button", { name: "Send test event" }).click();
-    await expect(second.getByText("Test event queued.")).toBeVisible();
+    await expect(second.getByText(/Test event queued\./)).toBeVisible();
     await second.close();
 
     const row = page.getByRole("row").filter({ hasText: "relay.test" });

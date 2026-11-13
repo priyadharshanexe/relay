@@ -69,7 +69,7 @@ describe("DeliveriesPage", () => {
     expect(link).toHaveAttribute("href", "/deliveries/d2");
     const row = link.closest("tr")!;
     expect(within(row).getByText("Dead")).toBeInTheDocument();
-    expect(within(row).getByText("http_status: the receiver answered HTTP 500")).toBeInTheDocument();
+    expect(within(row).getByText("The receiver answered HTTP 500")).toBeInTheDocument();
     expect(screen.getByText("Showing 2 deliveries")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
   });
@@ -253,6 +253,8 @@ function detail(overrides: Partial<DeliveryDetail> = {}): DeliveryDetail {
   return {
     ...delivery({ status: "dead", attempts: 2, last_error: "http_status: the receiver answered HTTP 500" }),
     payload: { order_id: 42 },
+    endpoint_status: "active",
+    endpoint_breaker_state: "closed",
     attempt_log: [attempt(1), attempt(2)],
     ...overrides,
   };
@@ -277,7 +279,7 @@ describe("DeliveryDetailPage", () => {
     expect(screen.getByText("Attempt 2")).toBeInTheDocument();
     expect(screen.getAllByText("HTTP 500")).toHaveLength(2);
     expect(screen.getByText(/60 s after the\s+previous attempt/)).toBeInTheDocument();
-    expect(screen.getByText("http_status: the receiver answered HTTP 500")).toBeInTheDocument();
+    expect(screen.getByText("The receiver answered HTTP 500")).toBeInTheDocument();
     expect(screen.getByText(/"order_id": 42/)).toBeInTheDocument();
   });
 

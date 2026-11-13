@@ -1,5 +1,13 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
+import { type QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { ApiError, api, getCurrentOrgId, setCurrentOrgId } from "../lib/api";
 import type { Organization, Session } from "../lib/types";
 
@@ -15,6 +23,16 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const SESSION_QUERY_KEY = ["session"] as const;
+
+/** Written on logout. Other tabs of the same browser see the change and log out too. */
+export const LOGOUT_SIGNAL_KEY = "relay.loggedOutAt";
+
+/** Forget the session and everything loaded for it. The router then shows Log in. */
+export function endSessionLocally(queryClient: QueryClient): void {
+  setCurrentOrgId(null);
+  queryClient.setQueryData(SESSION_QUERY_KEY, null);
+  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "session" });
+}
 
 /** Loads "who am I?". Resolves to null when nobody is logged in. */
 export function useSessionQuery() {
@@ -61,10 +79,22 @@ export function AuthProvider({ session, children }: { session: Session; children
 
   const logout = useCallback(async () => {
     await api<void>("/v1/auth/logout", { method: "POST", skipRefresh: true }).catch(() => undefined);
-    setCurrentOrgId(null);
-    queryClient.setQueryData(SESSION_QUERY_KEY, null);
-    // Forget everything that belonged to the logged-out user.
-    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== "session" });
+    endSessionLocally(queryClient);
+    try {
+      localStorage.setItem(LOGOUT_SIGNAL_KEY, String(Date.now()));
+    } catch {
+      // Storage can be unavailable (private mode); this tab is logged out anyway.
+    }
+  }, [queryClient]);
+
+  // Logging out in one tab must log out every tab. The browser fires "storage"
+  // in the *other* tabs when a value changes, which is exactly what is needed.
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key === LOGOUT_SIGNAL_KEY && event.newValue) endSessionLocally(queryClient);
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, [queryClient]);
 
   const value = useMemo<AuthContextValue | null>(

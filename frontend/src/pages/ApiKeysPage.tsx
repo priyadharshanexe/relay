@@ -18,8 +18,20 @@ import {
 import { api, fieldErrors } from "../lib/api";
 import { fullDate, timeAgo } from "../lib/format";
 import type { ApiKey, ApiKeyCreated } from "../lib/types";
+import { requiredText } from "../lib/validate";
 
 const KEYS = ["api-keys"] as const;
+
+/** A copy-and-paste request that sends one event with the new key. */
+export function usageExample(key: string): string {
+  return [
+    `curl -X POST ${window.location.origin}/v1/events \\`,
+    `  -H "Authorization: Bearer ${key}" \\`,
+    `  -H "Content-Type: application/json" \\`,
+    `  -H "Idempotency-Key: order-42-paid" \\`,
+    `  -d '{"type": "order.paid", "payload": {"order_id": 42}}'`,
+  ].join("\n");
+}
 
 export function ApiKeysPage() {
   const { canEdit } = useAuth();
@@ -29,7 +41,11 @@ export function ApiKeysPage() {
   const [created, setCreated] = useState<ApiKeyCreated | null>(null);
   const [revoking, setRevoking] = useState<ApiKey | null>(null);
 
-  const keys = useQuery({ queryKey: KEYS, queryFn: () => api<ApiKey[]>("/v1/api-keys") });
+  const keys = useQuery({
+    queryKey: KEYS,
+    queryFn: () => api<ApiKey[]>("/v1/api-keys"),
+    refetchInterval: 15_000, // "last used" changes as the key is used
+  });
 
   const create = useMutation({
     mutationFn: () =>
@@ -50,12 +66,20 @@ export function ApiKeysPage() {
     },
   });
 
+  const [clientError, setClientError] = useState<string>();
+
   function submit(event: FormEvent) {
     event.preventDefault();
+    const problem = requiredText(name, "a name for the key");
+    setClientError(problem);
+    if (problem) {
+      create.reset();
+      return;
+    }
     create.mutate();
   }
 
-  const nameError = fieldErrors(create.error).name;
+  const nameError = clientError ?? fieldErrors(create.error).name;
   const addButton = canEdit && (
     <Button variant="primary" onClick={() => setCreating(true)}>
       Create API key
@@ -126,7 +150,6 @@ export function ApiKeysPage() {
             {(props) => (
               <Input
                 {...props}
-                required
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="orders-service"
@@ -143,10 +166,27 @@ export function ApiKeysPage() {
         </form>
       </Modal>
 
-      <Modal title="Save this API key" open={created !== null} onClose={() => setCreated(null)}>
+      <Modal
+        title="Save this API key"
+        open={created !== null}
+        onClose={() => setCreated(null)}
+        dismissible={false}
+      >
         {created && (
           <>
             <SecretReveal label={`API key "${created.name}"`} secret={created.key} />
+            <div className="mt-4">
+              <p className="text-sm font-medium text-slate-900">Send your first event</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Run this from your backend or a terminal. The key goes in the Authorization header.
+              </p>
+              <pre
+                data-testid="usage-example"
+                className="mt-2 overflow-x-auto rounded-md bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-100"
+              >
+                {usageExample(created.key)}
+              </pre>
+            </div>
             <div className="mt-5 flex justify-end">
               <Button variant="primary" onClick={() => setCreated(null)}>
                 I have saved it

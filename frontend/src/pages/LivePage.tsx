@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../auth/AuthProvider";
-import { DeliveryStatusBadge, errorKindLabel } from "../components/delivery";
+import { useQueryClient } from "@tanstack/react-query";
+import { endSessionLocally, useAuth } from "../auth/AuthProvider";
+import { DeliveryStatusBadge, errorKindLabel, useEndpoints } from "../components/delivery";
 import { Badge, Button, Card, EmptyState, PageHeader } from "../components/ui";
-import { api } from "../lib/api";
+import { ApiError, api } from "../lib/api";
 import { milliseconds } from "../lib/format";
 import type { LiveUpdate } from "../lib/types";
 
@@ -25,6 +26,7 @@ export function useLiveFeed(orgId: string) {
   const [updates, setUpdates] = useState<LiveUpdate[]>([]);
   const [connection, setConnection] = useState<Connection>("connecting");
   const [paused, setPaused] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (paused) return;
@@ -49,11 +51,18 @@ export function useLiveFeed(orgId: string) {
         source.close();
         retry = setTimeout(() => {
           // Refreshes the session cookie if it expired, then reconnects.
-          void api("/v1/auth/me")
-            .catch(() => undefined)
-            .finally(() => {
+          api("/v1/auth/me").then(
+            () => {
               if (!stopped) connect();
-            });
+            },
+            (error: unknown) => {
+              if (stopped) return;
+              // The session is really over (logged out elsewhere, or expired
+              // for good): stop, and let the app show the login page.
+              if (error instanceof ApiError && error.status === 401) endSessionLocally(queryClient);
+              else connect(); // a network blip: keep trying
+            },
+          );
         }, RECONNECT_MS);
       };
     }
@@ -65,7 +74,7 @@ export function useLiveFeed(orgId: string) {
       clearTimeout(retry);
       source?.close();
     };
-  }, [orgId, paused]);
+  }, [orgId, paused, queryClient]);
 
   return { updates, connection, paused, setPaused, clear: () => setUpdates([]) };
 }
@@ -80,6 +89,9 @@ export function LivePage() {
   const { organization } = useAuth();
   const { updates, connection, paused, setPaused, clear } = useLiveFeed(organization.id);
   const state = paused ? { label: "Paused", tone: "slate" as const } : CONNECTION[connection];
+  // The feed carries endpoint ids; the list we already have turns them into URLs.
+  const endpoints = useEndpoints();
+  const urlOf = new Map(endpoints.data?.map((endpoint) => [endpoint.id, endpoint.url]));
 
   return (
     <>
@@ -111,6 +123,7 @@ export function LivePage() {
               <tr>
                 <th scope="col" className="px-4 py-3">Time</th>
                 <th scope="col" className="px-4 py-3">Event</th>
+                <th scope="col" className="px-4 py-3">Endpoint</th>
                 <th scope="col" className="px-4 py-3">Attempt</th>
                 <th scope="col" className="px-4 py-3">Result</th>
                 <th scope="col" className="px-4 py-3">Duration</th>
@@ -130,6 +143,12 @@ export function LivePage() {
                     >
                       {update.event_type}
                     </Link>
+                  </td>
+                  <td
+                    className="max-w-xs truncate px-4 py-2 font-mono text-xs text-slate-600"
+                    title={urlOf.get(update.endpoint_id)}
+                  >
+                    {urlOf.get(update.endpoint_id) ?? "(deleted endpoint)"}
                   </td>
                   <td className="px-4 py-2 text-slate-700">#{update.attempt}</td>
                   <td className="px-4 py-2">

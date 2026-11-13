@@ -17,6 +17,7 @@ import {
 import { api, fieldErrors } from "../lib/api";
 import { timeAgo } from "../lib/format";
 import type { Receiver, ReceiverMode } from "../lib/types";
+import { requiredText } from "../lib/validate";
 
 const RECEIVERS = ["receivers"] as const;
 
@@ -149,12 +150,20 @@ export function ReceiversPage() {
     },
   });
 
+  const [clientError, setClientError] = useState<string>();
+
   function submit(event: FormEvent) {
     event.preventDefault();
+    const problem = requiredText(name, "a name for the receiver");
+    setClientError(problem);
+    if (problem) {
+      create.reset();
+      return;
+    }
     create.mutate();
   }
 
-  const nameError = fieldErrors(create.error).name;
+  const nameError = clientError ?? fieldErrors(create.error).name;
   const addButton = canEdit && (
     <Button variant="primary" onClick={() => setCreating(true)}>
       Create test receiver
@@ -195,7 +204,6 @@ export function ReceiversPage() {
             {(props) => (
               <Input
                 {...props}
-                required
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Flaky customer"

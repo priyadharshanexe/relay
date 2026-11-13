@@ -37,9 +37,22 @@ export function errorKindLabel(kind: ErrorKind | null): string {
   return kind ? ERROR_KINDS[kind] : "OK";
 }
 
+/** "http_status: the receiver answered HTTP 500" -> "The receiver answered HTTP 500".
+ *  The stored text starts with an internal error code that means nothing to a user. */
+export function readableError(lastError: string | null): string {
+  if (!lastError) return "";
+  const text = lastError.replace(/^[a-z_]+:\s*/, "");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /** Endpoints, for filter dropdowns. Shares its cache with the Endpoints page. */
 export function useEndpoints() {
-  return useQuery({ queryKey: ["endpoints"], queryFn: () => api<Endpoint[]>("/v1/endpoints") });
+  return useQuery({
+    queryKey: ["endpoints"],
+    queryFn: () => api<Endpoint[]>("/v1/endpoints"),
+    // A breaker opening or closing changes what the list should show.
+    refetchInterval: 10_000,
+  });
 }
 
 export function DeliveryTable({ deliveries }: { deliveries: Delivery[] }) {
@@ -69,8 +82,11 @@ export function DeliveryTable({ deliveries }: { deliveries: Delivery[] }) {
                   {delivery.event_type}
                 </Link>
                 {delivery.last_error && (
-                  <p className="mt-0.5 max-w-xs truncate text-xs text-red-700" title={delivery.last_error}>
-                    {delivery.last_error}
+                  <p
+                    className="mt-0.5 max-w-xs truncate text-xs text-red-700"
+                    title={readableError(delivery.last_error)}
+                  >
+                    {readableError(delivery.last_error)}
                   </p>
                 )}
               </td>

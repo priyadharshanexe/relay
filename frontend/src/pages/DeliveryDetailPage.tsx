@@ -2,13 +2,33 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import { DeliveryStatusBadge, errorKindLabel } from "../components/delivery";
+import { DeliveryStatusBadge, errorKindLabel, readableError } from "../components/delivery";
 import { Badge, Button, Card, ErrorState, LoadingState } from "../components/ui";
 import { ApiError, api } from "../lib/api";
 import { fullDate, milliseconds, timeAgo } from "../lib/format";
 import type { Attempt, Delivery, DeliveryDetail } from "../lib/types";
 
 const REPLAYABLE = new Set(["dead", "succeeded"]);
+
+/** Why a waiting delivery is not being sent right now, if there is a reason
+ *  beyond the normal retry delay. Without this, "Pending" looks like a stall. */
+export function holdReason(delivery: DeliveryDetail): string | null {
+  if (delivery.status !== "pending" && delivery.status !== "retrying") return null;
+  if (delivery.endpoint_status === "paused") {
+    return "This endpoint is paused. The delivery will be sent when the endpoint is resumed.";
+  }
+  if (delivery.endpoint_status === "disabled") {
+    return "This endpoint is disabled, so nothing is being sent to it.";
+  }
+  if (delivery.endpoint_breaker_state !== "closed") {
+    return (
+      "This endpoint has been failing, so Relay has stopped sending to it for now. " +
+      "It tries one delivery about every minute, and resumes all of them as soon as one succeeds. " +
+      "Waiting like this does not use up retry attempts."
+    );
+  }
+  return null;
+}
 
 function HeaderList({ title, headers }: { title: string; headers: Record<string, string> | null }) {
   const entries = Object.entries(headers ?? {});
@@ -125,7 +145,10 @@ export function DeliveryDetailPage() {
 
   if (query.isPending) return <LoadingState label="Loading delivery…" />;
   if (query.isError) {
-    const missing = query.error instanceof ApiError && query.error.status === 404;
+    // 404: no such delivery here. 422: the id in the address is not even an id
+    // (a mistyped or truncated link). To the person looking, both mean the same.
+    const missing =
+      query.error instanceof ApiError && (query.error.status === 404 || query.error.status === 422);
     return (
       <div className="space-y-4">
         {back}
@@ -180,6 +203,15 @@ export function DeliveryDetailPage() {
         </p>
       )}
 
+      {holdReason(delivery) && (
+        <p
+          role="status"
+          className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          <strong className="font-semibold">On hold.</strong> {holdReason(delivery)}
+        </p>
+      )}
+
       <Card className="mb-6 p-5">
         <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div>
@@ -207,7 +239,7 @@ export function DeliveryDetailPage() {
           {delivery.last_error && (
             <div className="sm:col-span-2 lg:col-span-4">
               <dt className="text-xs text-slate-500">Last error</dt>
-              <dd className="font-medium text-red-700">{delivery.last_error}</dd>
+              <dd className="font-medium text-red-700">{readableError(delivery.last_error)}</dd>
             </div>
           )}
         </dl>
