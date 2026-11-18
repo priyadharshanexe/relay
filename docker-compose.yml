@@ -13,7 +13,7 @@ name: relay
 x-app: &app
   build: .
   restart: unless-stopped
-  environment:
+  environment: &app-environment
     RELAY_ENVIRONMENT: development
     RELAY_DATABASE_URL: postgresql+asyncpg://relay:relay@postgres:5432/relay
     RELAY_REDIS_URL: redis://redis:6379/0
@@ -75,8 +75,17 @@ services:
 
   api:
     <<: *app
+    environment:
+      <<: *app-environment
+      # Visitors reach the API through Caddy (the web service), so the address
+      # the API sees is Caddy's. Trust the X-Forwarded-For header Caddy sets,
+      # or every visitor would share one sign-up and login allowance. Caddy
+      # replaces any X-Forwarded-For a visitor sends, so it cannot be spoofed
+      # through it; the port below is bound to this machine only, so nothing
+      # else can reach the API directly to spoof it either.
+      FORWARDED_ALLOW_IPS: "*"
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
 
   # The dashboard: http://localhost:8080
   web:

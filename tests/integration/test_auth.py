@@ -1,6 +1,7 @@
 import base64
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import jwt
 import pytest
@@ -196,23 +197,42 @@ async def test_repeated_login_attempts_are_rate_limited() -> None:
 
 async def test_registrations_are_rate_limited_per_ip() -> None:
     app = create_app(make_settings(registrations_per_hour=2))
+
+    def sign_up(client: AsyncClient, number: int) -> Any:
+        return client.post(
+            "/v1/auth/register",
+            json={
+                "email": f"user{number}@example.com",
+                "password": PASSWORD,
+                "organization_name": "Org",
+            },
+        )
+
     async with (
         app.router.lifespan_context(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
+        AsyncClient(
+            transport=ASGITransport(app=app, client=("203.0.113.7", 50000)),
+            base_url="http://test",
+        ) as client,
+        AsyncClient(
+            transport=ASGITransport(app=app, client=("198.51.100.9", 50000)),
+            base_url="http://test",
+        ) as neighbour,
     ):
-        statuses = []
-        for number in range(3):
-            response = await client.post(
-                "/v1/auth/register",
-                json={
-                    "email": f"user{number}@example.com",
-                    "password": PASSWORD,
-                    "organization_name": "Org",
-                },
-            )
-            statuses.append(response.status_code)
+        statuses = [(await sign_up(client, number)).status_code for number in range(3)]
+        blocked = await sign_up(client, 3)
+        other_ip = await sign_up(neighbour, 4)
 
     assert statuses == [201, 201, 429]
+    # The project's one error shape, with the wait in the header and the body.
+    body = blocked.json()
+    assert set(body) == {"code", "message", "details", "request_id"}
+    assert body["code"] == "rate_limited"
+    retry_after = int(blocked.headers["Retry-After"])
+    assert 1 <= retry_after <= 3600
+    assert body["details"] == {"retry_after_seconds": retry_after}
+    # Counted per address: someone else is not locked out.
+    assert other_ip.status_code == 201
 
 
 # --------------------------------------------------------------- access tokens
