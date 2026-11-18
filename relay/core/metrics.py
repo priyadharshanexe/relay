@@ -53,6 +53,16 @@ LEASES_RECOVERED = Counter(
 )
 
 # ----------------------------------------------------------------------- queue
+# ---------------------------------------------------------------- housekeeping
+EVENTS_PURGED = Counter(
+    "relay_retention_events_deleted",
+    "Events deleted by the retention job, with their deliveries and attempts.",
+)
+DEMO_RESETS = Counter(
+    "relay_demo_resets",
+    "Times the public demo's data was wiped and seeded again.",
+)
+
 QUEUE_DEPTH = Gauge(
     "relay_queue_depth",
     "Deliveries that are not finished yet, by status.",

@@ -23,7 +23,24 @@ docker compose up --build
 | Prometheus | http://localhost:9090 (alerts under Alerts) |
 | Jaeger   | http://localhost:16686 (traces) |
 
-Postgres is published on host port 5433, not 5432, so it never clashes with a Postgres you may already have installed.
+Postgres is published on host port 5433, not 5432, so it never clashes with a Postgres you may already have installed. The API port is published on this machine only (`127.0.0.1`); visitors reach the API through the dashboard's address.
+
+### Demo data
+
+```bash
+docker compose exec api python -m relay.seed
+```
+
+This creates an organisation called "Relay Demo" with an owner account, an API key, two test receivers (one that accepts webhooks, one that fails) with an endpoint pointing at each, and five sample events. Log in at http://localhost:8080 as `demo@example.com` with the password in `RELAY_DEMO_PASSWORD` (`relay-demo-account` unless you change it). Running it again changes nothing; if something was deleted, it is put back. It never prints a secret.
+
+### Housekeeping
+
+The worker also runs two background jobs:
+
+- **Retention:** events older than `RELAY_RETENTION_DAYS` (30) are deleted with their deliveries and attempts, in small batches. An event with a delivery still pending, in flight or retrying is never deleted.
+- **Demo reset** (only when `RELAY_DEMO_MODE=true`, for a public demo): once a day at `RELAY_DEMO_RESET_HOUR_UTC` (03:00 UTC), all data is deleted and the demo is seeded again. It runs once a day however many workers there are.
+
+Sign-up is limited per client address (`RELAY_REGISTRATIONS_PER_HOUR`, 10 by default); over the limit, the API answers 429 with a `Retry-After` header.
 
 Check it's up:
 

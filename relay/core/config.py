@@ -80,6 +80,23 @@ class Settings(BaseSettings):
     # How long an invitation link stays valid.
     invitation_ttl_days: int = Field(default=7, ge=1, le=30)
 
+    # Retention: events older than this are deleted, with their deliveries and
+    # attempts, once none of their deliveries is still waiting to be sent.
+    retention_days: int = Field(default=30, ge=1, le=3650)
+    # Rows deleted per transaction, so a big clean-up never holds locks for long.
+    retention_batch_size: int = Field(default=1000, ge=1, le=100_000)
+    # How often the worker runs its housekeeping (retention, demo reset).
+    maintenance_interval_seconds: float = Field(default=300, gt=0, le=86_400)
+
+    # Demo data (python -m relay.seed). The demo account's password is meant to
+    # be shared with visitors, so it is not a secret; change it all the same.
+    demo_organization_name: str = Field(default="Relay Demo", min_length=1, max_length=200)
+    demo_email: str = "demo@example.com"
+    demo_password: SecretStr = SecretStr("relay-demo-account")
+    # Public demo only: wipe ALL data once a day and seed the demo again.
+    demo_mode: bool = False
+    demo_reset_hour_utc: int = Field(default=3, ge=0, le=23)
+
     # Abuse limits, per client IP
     login_attempts_per_minute: int = Field(default=10, ge=1)
     registrations_per_hour: int = Field(default=10, ge=1)
@@ -145,6 +162,8 @@ class Settings(BaseSettings):
                 )
             if self.endpoints_allow_private_networks:
                 raise ValueError("RELAY_ENDPOINTS_ALLOW_PRIVATE_NETWORKS must be off in production")
+        if len(self.demo_password.get_secret_value()) < 10:
+            raise ValueError("RELAY_DEMO_PASSWORD must be at least 10 characters")
         if any(delay < 0 for delay in self.retry_schedule_seconds):
             raise ValueError("RELAY_RETRY_SCHEDULE_SECONDS cannot contain negative delays")
         if self.worker_lock_seconds <= self.delivery_total_timeout_seconds * 2:

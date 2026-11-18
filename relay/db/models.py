@@ -351,6 +351,20 @@ class TestReceiver(Base):
 
 
 # ----------------------------------------------------------------------- audit
+class ScheduledJob(Base):
+    """When each periodic job last ran.
+
+    Several workers run the same housekeeping loop. The row for a job is locked
+    while it runs, and its time is updated in the same transaction, so a
+    once-a-day job runs once a day however many workers there are.
+    """
+
+    __tablename__ = "scheduled_jobs"
+
+    name: Mapped[str] = mapped_column(String(100), primary_key=True)
+    last_run_at: Mapped[datetime | None]
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

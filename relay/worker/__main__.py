@@ -20,6 +20,7 @@ from relay.domain.rate_limit import RateLimiter
 from relay.domain.ssrf import AddressPolicy
 from relay.worker.deliver import DeliveryProcessor
 from relay.worker.loop import DeliveryWorker, install_signal_handlers, new_worker_id
+from relay.worker.maintenance import MaintenanceWorker
 from relay.worker.sender import Sender, system_resolver
 
 
@@ -87,12 +88,23 @@ async def _main(settings: Settings) -> None:
         lock_seconds=settings.worker_lock_seconds,
         worker_id=worker_id,
     )
+    # Retention and the demo reset, on a slow timer beside delivery.
+    maintenance = MaintenanceWorker(
+        sessions=sessions,
+        settings=settings,
+        box=SecretBox(settings.encryption_key.get_secret_value()),
+    )
     if settings.worker_metrics_port:
         # A tiny HTTP server on its own thread, for Prometheus to scrape.
         start_http_server(settings.worker_metrics_port)
-    install_signal_handlers(worker.request_stop)
+
+    def stop() -> None:
+        worker.request_stop()
+        maintenance.request_stop()
+
+    install_signal_handlers(stop)
     try:
-        await worker.run()
+        await asyncio.gather(worker.run(), maintenance.run())
     finally:
         await sender.aclose()
         await redis.aclose()
