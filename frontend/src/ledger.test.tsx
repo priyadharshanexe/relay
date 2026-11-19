@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { axisTop } from "./components/charts";
-import { groupStops, labelled, nextNote, stopsOf } from "./components/Tracker";
+import { groupStops, labelled, mergeCollidingLabels, nextNote, stopsOf } from "./components/Tracker";
 import { attemptTime } from "./lib/time";
 import { CountUp } from "./components/ui";
 import { storedTheme, useTheme } from "./lib/theme";
@@ -208,5 +208,34 @@ describe("chart axes and times (review fixes)", () => {
     const now = new Date("2026-03-11T09:00:00");
     expect(attemptTime("2026-03-11T08:30:00", now)).not.toMatch(/,/);
     expect(attemptTime("2026-03-10T21:36:01", now)).toMatch(/10.*21:36:01/);
+  });
+});
+
+describe("tracker labels never overlap (review fix)", () => {
+  function group(label: string, position: number, kind: "failed" | "next" = "failed") {
+    const numbers = label.replace(/#/g, "").split("–").map(Number);
+    const stops = numbers.map((n) => ({ key: `a${n}`, at: n, kind, label: `#${n}`, title: `Attempt ${n}` }));
+    return { stops, position, kind, label, title: label };
+  }
+
+  it("merges two groups whose labels would touch, even when their dots are apart", () => {
+    // 1000 px wide: the dots are 50 px apart, but "#1–#2" and "#3–#4" each need ~36 px.
+    const merged = mergeCollidingLabels([group("#1–#2", 0), group("#3–#4", 5), group("#5", 40)], 1000);
+    expect(merged.map((g) => g.label)).toEqual(["#1–#4", "#5"]);
+  });
+
+  it("leaves groups alone when their labels have room", () => {
+    const kept = mergeCollidingLabels([group("#1–#2", 0), group("#3", 30), group("#4", 60)], 1000);
+    expect(kept.map((g) => g.label)).toEqual(["#1–#2", "#3", "#4"]);
+  });
+
+  it("keeps merging while a grown label still touches its neighbour", () => {
+    const merged = mergeCollidingLabels([group("#1", 0), group("#2", 2), group("#3", 4), group("#4", 50)], 1000);
+    expect(merged.map((g) => g.label)).toEqual(["#1–#3", "#4"]);
+  });
+
+  it("never merges the next-attempt stop", () => {
+    const groups = mergeCollidingLabels([group("#1", 0), { ...group("#9", 1, "next"), label: "Next" }], 1000);
+    expect(groups.map((g) => g.label)).toEqual(["#1", "Next"]);
   });
 });

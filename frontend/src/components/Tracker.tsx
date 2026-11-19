@@ -100,17 +100,61 @@ export function groupStops(stops: Stop[], positions: number[], mergePercent: num
     }
     groups.push({ stops: [stop], position, kind: stop.kind, label: stop.label, title: stop.title });
   });
-  for (const group of groups) {
-    const attempts = group.stops.filter((stop) => stop.kind === "ok" || stop.kind === "failed");
-    if (group.stops.length === 1) continue;
-    group.kind = attempts.some((stop) => stop.kind === "failed") ? "failed" : attempts.length ? "ok" : group.kind;
-    group.label =
-      attempts.length > 1
-        ? `${attempts[0]?.label}–${attempts.at(-1)?.label}`
-        : (attempts[0]?.label ?? group.label);
-    group.title = group.stops.map((stop) => stop.title).join("\n");
-  }
+  groups.forEach(relabel);
   return groups;
+}
+
+/** A merged group's dot colour, label ("#1–#4") and hover text. */
+function relabel(group: Group): void {
+  if (group.stops.length === 1) return;
+  const attempts = group.stops.filter((stop) => stop.kind === "ok" || stop.kind === "failed");
+  group.kind = attempts.some((stop) => stop.kind === "failed") ? "failed" : attempts.length ? "ok" : group.kind;
+  group.label =
+    attempts.length > 1
+      ? `${attempts[0]?.label}–${attempts.at(-1)?.label}`
+      : (attempts[0]?.label ?? group.label);
+  group.title = group.stops.map((stop) => stop.title).join("\n");
+}
+
+// Estimated width of a stop label at text-2xs: wide enough to be safe.
+const CHAR_PX = 6.5;
+const LABEL_GAP_PX = 6;
+
+/** Where a group's label sits, in pixels: the first hugs the left end, the
+ *  last the right end, the others are centred under their stop. */
+export function labelBox(group: Group, index: number, count: number, widthPx: number): [number, number] {
+  const x = (group.position / 100) * widthPx;
+  const w = group.label.length * CHAR_PX + 4;
+  if (index === 0) return [x - 6, x - 6 + w];
+  if (index === count - 1) return [x - w + 6, x + 6];
+  return [x - w / 2, x + w / 2];
+}
+
+/**
+ * Merge neighbouring groups whose labels would run into each other, until none
+ * do. Stops that are far enough apart as dots can still have labels too wide
+ * for the space between them ("#1–#2" next to "#3–#4"). The end stop (next
+ * attempt, dead letter) is never merged; the label pass gives way for it.
+ */
+export function mergeCollidingLabels(groups: Group[], widthPx: number): Group[] {
+  const result = groups.map((group) => ({ ...group, stops: [...group.stops] }));
+  for (let index = 1; index < result.length; ) {
+    const previous = result[index - 1];
+    const current = result[index];
+    if (!previous || !current) break;
+    const isEnd = current.kind === "next" || current.kind === "dead";
+    const [, previousEnd] = labelBox(previous, index - 1, result.length, widthPx);
+    const [currentStart] = labelBox(current, index, result.length, widthPx);
+    if (!isEnd && previousEnd + LABEL_GAP_PX > currentStart) {
+      previous.stops.push(...current.stops);
+      relabel(previous);
+      result.splice(index, 1);
+      index = Math.max(index - 1, 1); // the grown label may now touch its other neighbour
+    } else {
+      index += 1;
+    }
+  }
+  return result;
 }
 
 /** Which groups get a label: each far enough from the last labelled one, and
@@ -170,7 +214,10 @@ export function Tracker({ delivery }: { delivery: DeliveryDetail }) {
   const span = Math.max(...stops.map((stop) => stop.at), 1);
   // Square-root scale; the final stop sits at the right end.
   const position = (at: number) => (Math.sqrt(Math.max(at, 0)) / Math.sqrt(span)) * 100;
-  const groups = groupStops(stops, stops.map((stop) => position(stop.at)), (MERGE_PX / width) * 100);
+  const groups = mergeCollidingLabels(
+    groupStops(stops, stops.map((stop) => position(stop.at)), (MERGE_PX / width) * 100),
+    width,
+  );
   const showLabel = labelled(groups.map((group) => group.position), (LABEL_PX / width) * 100);
   const minNote = (NOTE_PX / width) * 100;
 
