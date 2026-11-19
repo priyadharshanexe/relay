@@ -13,7 +13,9 @@
  * same next_attempt_at the page shows in words. If the endpoint is holding
  * deliveries back, the stretch says "on hold".
  */
+import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { prefersReducedMotion } from "../lib/motion";
 import { fullDate } from "../lib/format";
 import { gap } from "../lib/time";
 import type { DeliveryDetail } from "../lib/types";
@@ -177,12 +179,32 @@ export function labelled(positions: number[], minLabel = 6): boolean[] {
   return shown;
 }
 
-/** The note on the last stretch: when the next attempt is due, from now. */
+/** 18000 -> "5:00:00", 95 -> "1:35": a countdown that ticks every second. */
+export function countdown(seconds: number): string {
+  const s = Math.max(Math.round(seconds), 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const rest = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${rest}` : `${m}:${rest}`;
+}
+
+/** The note on the last stretch: when the next attempt is due, counted down from now. */
 export function nextNote(delivery: DeliveryDetail, now = Date.now()): string | null {
   if (delivery.status !== "pending" && delivery.status !== "retrying") return null;
-  const seconds = Math.round((new Date(delivery.next_attempt_at).getTime() - now) / 1000);
-  const when = seconds > 0 ? `next in ${gap(seconds)}` : "next attempt due now";
+  const seconds = (new Date(delivery.next_attempt_at).getTime() - now) / 1000;
+  const when = seconds >= 1 ? `next in ${countdown(seconds)}` : "next attempt due now";
   return onHold(delivery) ? `on hold · ${when}` : when;
+}
+
+/** The current time, updated every second while `running`. */
+function useNow(running: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [running]);
+  return now;
 }
 
 const DOT: Record<Stop["kind"], string> = {
@@ -207,9 +229,11 @@ function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
   return [ref, width];
 }
 
-export function Tracker({ delivery }: { delivery: DeliveryDetail }) {
+export function Tracker({ delivery, launch = 0 }: { delivery: DeliveryDetail; launch?: number }) {
   const [track, width] = useWidth();
-  const now = Date.now();
+  const waitingForNext = delivery.status === "pending" || delivery.status === "retrying";
+  const now = useNow(waitingForNext);
+  const reduced = prefersReducedMotion();
   const stops = stopsOf(delivery, now);
   const span = Math.max(...stops.map((stop) => stop.at), 1);
   // Square-root scale; the final stop sits at the right end.
@@ -283,6 +307,26 @@ export function Tracker({ delivery }: { delivery: DeliveryDetail }) {
           >
             {note}
           </span>
+        )}
+
+        {/* Waiting: a packet makes its way from now towards the next attempt. */}
+        {!reduced && nowPosition !== null && waitingForNext && (
+          <motion.span
+            className="absolute top-[17px] h-3 w-3 -translate-x-1/2 rounded-full bg-warn shadow-[0_0_12px_var(--color-warn)]"
+            initial={{ left: `${nowPosition}%`, opacity: 0 }}
+            animate={{ left: [`${nowPosition}%`, "100%"], opacity: [0, 1, 1, 0] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut", times: [0, 0.15, 0.85, 1] }}
+          />
+        )}
+        {/* Replay: a packet launched along the whole route. */}
+        {!reduced && launch > 0 && (
+          <motion.span
+            key={`launch-${launch}`}
+            className="absolute top-[15px] h-4 w-4 -translate-x-1/2 rounded-full bg-accent shadow-[var(--glow-signal)]"
+            initial={{ left: "0%", opacity: 1, scale: 0.4 }}
+            animate={{ left: "100%", opacity: [1, 1, 0], scale: [0.4, 1.2, 1] }}
+            transition={{ duration: 1.1, ease: [0.2, 0.7, 0.2, 1] }}
+          />
         )}
 
         {groups.map((group, index) => (

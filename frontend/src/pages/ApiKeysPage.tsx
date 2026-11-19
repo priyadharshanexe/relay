@@ -116,8 +116,12 @@ export function ApiKeysPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {keys.data.map((key) => (
-                <tr key={key.id} className={key.revoked_at ? "text-fg-3" : "text-fg-2"}>
+              {keys.data.map((key, index) => (
+                <tr
+                  key={key.id}
+                  style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+                  className={`animate-rise [animation-fill-mode:both] ${key.revoked_at ? "text-fg-3" : "text-fg-2"}`}
+                >
                   <td className={`px-5 py-3 font-medium ${key.revoked_at ? "" : "text-fg"}`}>{key.name}</td>
                   <td className="px-5 py-3 font-mono text-xs">{key.prefix}…</td>
                   <td className="px-5 py-3" title={fullDate(key.last_used_at)}>

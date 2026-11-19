@@ -15,15 +15,18 @@ const ROUTES = [
 ];
 
 // Each packet: which route, how long a trip takes, when it leaves, its colour.
+// Trips of 6–8 s, staggered so three or four are always on their way.
 const PACKETS: [number, number, number, string][] = [
-  [0, 9, 0, "var(--color-ok)"],
-  [1, 11, 2.5, "var(--color-ok)"],
-  [2, 10, 5, "var(--color-warn)"],
-  [3, 12, 1.2, "var(--color-ok)"],
-  [4, 13, 6.5, "var(--color-ok)"],
-  [1, 11, 7.8, "var(--color-bad)"],
-  [2, 10, 9.4, "var(--color-ok)"],
-  [0, 9, 4.6, "var(--color-flight)"],
+  [0, 6.5, 0, "var(--color-ok)"],
+  [1, 7, 1.1, "var(--color-ok)"],
+  [2, 7.5, 2.3, "var(--color-warn)"],
+  [3, 8, 0.6, "var(--color-ok)"],
+  [4, 7.5, 3.4, "var(--color-ok)"],
+  [1, 7, 4.6, "var(--color-bad)"],
+  [2, 7.5, 5.7, "var(--color-ok)"],
+  [0, 6.5, 3.2, "var(--color-flight)"],
+  [3, 8, 4.8, "var(--color-ok)"],
+  [4, 7.5, 6.9, "var(--color-ok)"],
 ];
 
 export function DispatchBackdrop() {
@@ -33,26 +36,26 @@ export function DispatchBackdrop() {
       aria-hidden="true"
       viewBox="0 0 1440 760"
       preserveAspectRatio="xMidYMid slice"
-      className="pointer-events-none absolute inset-0 h-full w-full opacity-60 [mask-image:radial-gradient(ellipse_at_center,transparent_22%,black_70%)]"
+      className="pointer-events-none absolute inset-0 h-full w-full [mask-image:radial-gradient(ellipse_at_center,rgb(0_0_0/0.25)_18%,black_62%)]"
     >
-      <g fill="none" stroke="var(--color-line-strong)" strokeWidth={1.5}>
+      <g fill="none" stroke="var(--color-fg-3)" strokeOpacity={0.35} strokeWidth={1.5}>
         {ROUTES.map((d, i) => (
           <path key={i} id={`route-${i}`} d={d} />
         ))}
       </g>
-      <g className="flow" fill="none" stroke="var(--color-accent)" strokeWidth={1.5} opacity={0.35}>
+      <g className="flow" fill="none" stroke="var(--color-accent)" strokeWidth={1.5} opacity={0.55}>
         {ROUTES.map((d, i) => (
           <path key={i} d={d} />
         ))}
       </g>
       {PACKETS.map(([route, seconds, delay, colour], i) => (
         <g key={i}>
-          <circle r={9} fill={colour} opacity={0.18}>
+          <circle r={12} fill={colour} opacity={0.22}>
             <animateMotion dur={`${seconds}s`} begin={`${delay}s`} repeatCount="indefinite" rotate="auto">
               <mpath href={`#route-${route}`} />
             </animateMotion>
           </circle>
-          <circle r={3.5} fill={colour}>
+          <circle r={5} fill={colour}>
             <animateMotion dur={`${seconds}s`} begin={`${delay}s`} repeatCount="indefinite">
               <mpath href={`#route-${route}`} />
             </animateMotion>

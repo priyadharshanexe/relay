@@ -16,6 +16,7 @@ import {
   Select,
 } from "../components/ui";
 import { DeadLetterIcon, DeliveriesIcon, ReplayIcon } from "../components/icons";
+import { ReplayBurst } from "../components/ReplayBurst";
 import { api } from "../lib/api";
 import type { Delivery, Page } from "../lib/types";
 
@@ -287,6 +288,7 @@ export function DeadLetterPage() {
   const { filters, setFilter, clear, active } = useFilters({ status: "dead" });
   const [confirming, setConfirming] = useState(false);
   const [replayed, setReplayed] = useState<number | null>(null);
+  const [burst, setBurst] = useState(0);
 
   const replay = useMutation({
     mutationFn: () =>
@@ -303,6 +305,7 @@ export function DeadLetterPage() {
     onSuccess: async (result) => {
       setConfirming(false);
       setReplayed(result.replayed);
+      setBurst((n) => n + 1);
       await queryClient.invalidateQueries({ queryKey: ["deliveries"] });
     },
   });
@@ -321,7 +324,8 @@ export function DeadLetterPage() {
         }
       />
       {replayed !== null && (
-        <div className="mb-5">
+        <div className="relative mb-5">
+          {replayed > 0 && <ReplayBurst key={burst} count={replayed} />}
           <Notice tone={replayed === 0 ? "info" : "ok"}>
             {replayed === 0
               ? "Nothing to replay."

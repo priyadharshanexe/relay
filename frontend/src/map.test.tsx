@@ -29,3 +29,19 @@ describe("the delivery map", () => {
     expect(curveMidpoint("M 0 0 C 0 0 8 8 8 8")).toEqual({ x: 4, y: 4 });
   });
 });
+
+describe("the live throughput strip", () => {
+  it("counts attempts per second over the last minute, failures apart", async () => {
+    const { bucketsOf } = await import("./components/Throughput");
+    const now = new Date("2026-03-10T12:00:00Z").getTime();
+    const at = (secondsAgo: number) => new Date(now - secondsAgo * 1000).toISOString();
+    const update = (secondsAgo: number, failed: boolean) =>
+      ({ at: at(secondsAgo), error_kind: failed ? "http_status" : null }) as never;
+    const buckets = bucketsOf([update(0, false), update(0, true), update(10, false), update(90, false)], now);
+    expect(buckets).toHaveLength(60);
+    expect(buckets[59]).toEqual({ ok: 1, failed: 1 });
+    expect(buckets[49]).toEqual({ ok: 1, failed: 0 });
+    // Older than a minute: not counted.
+    expect(buckets.reduce((sum, b) => sum + b.ok + b.failed, 0)).toBe(3);
+  });
+});

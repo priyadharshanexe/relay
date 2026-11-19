@@ -225,10 +225,12 @@ export function DeliveryDetailPage() {
   });
 
   const [justReplayed, setJustReplayed] = useState(false);
+  const [launches, setLaunches] = useState(0);
   const replay = useMutation({
     mutationFn: () => api<Delivery>(`/v1/deliveries/${id}/replay`, { method: "POST" }),
     onSuccess: async () => {
       setJustReplayed(true);
+      setLaunches((n) => n + 1);
       setTimeout(() => setJustReplayed(false), 1500);
       await queryClient.invalidateQueries({ queryKey: ["delivery", id] });
       await queryClient.invalidateQueries({ queryKey: ["deliveries"] });
@@ -318,7 +320,7 @@ export function DeliveryDetailPage() {
         )}
       </div>
 
-      {delivery.attempt_log.length > 0 && <Tracker delivery={delivery} />}
+      {delivery.attempt_log.length > 0 && <Tracker delivery={delivery} launch={launches} />}
 
       <div className="space-y-4 empty:hidden">
         {replay.isError && <ErrorState error={replay.error} />}

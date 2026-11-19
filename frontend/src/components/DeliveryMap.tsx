@@ -136,6 +136,7 @@ export function useTraffic({
   const [packets, setPackets] = useState<Packet[]>([]);
   const [recent, setRecent] = useState<Recent[]>([]);
   const [deadLanded, setDeadLanded] = useState(0);
+  const [tally, setTally] = useState<Record<number, { ok: number; failed: number }>>({});
   const next = useRef(1);
   const seen = useRef(new Set<string>());
   const [live, setLive] = useState(false);
@@ -173,6 +174,13 @@ export function useTraffic({
   const done = useCallback((packet: Packet) => {
     setPackets((current) => current.filter((p) => p.id !== packet.id));
     if (packet.outcome === "dead") setDeadLanded((n) => n + 1);
+    setTally((current) => {
+      const now = current[packet.endpoint] ?? { ok: 0, failed: 0 };
+      return {
+        ...current,
+        [packet.endpoint]: packet.outcome === "ok" ? { ...now, ok: now.ok + 1 } : { ...now, failed: now.failed + 1 },
+      };
+    });
   }, []);
 
   const lastMinute = recent.filter((r) => r.at > Date.now() - 60_000);
@@ -183,6 +191,7 @@ export function useTraffic({
     live,
     simulating,
     deadLanded,
+    tally,
     perMinute: lastMinute.length,
     successRate: lastMinute.length ? accepted / lastMinute.length : null,
   };
@@ -190,6 +199,7 @@ export function useTraffic({
 
 // -------------------------------------------------------------------- packet
 const LEG_MS = { feed: 420, route: 700, back: 520, orbit: 700, drop: 460 };
+const TAIL = 5;
 const COLOUR: Record<Outcome | "flight", string> = {
   flight: "var(--color-flight)",
   ok: "var(--color-ok)",
@@ -219,6 +229,8 @@ function PacketDot({
 }) {
   const dot = useRef<SVGCircleElement>(null);
   const halo = useRef<SVGCircleElement>(null);
+  // The comet's tail: the last few positions, oldest first.
+  const tail = useRef<(SVGCircleElement | null)[]>([]);
 
   useEffect(() => {
     const route = paths.routes[packet.endpoint];
@@ -243,6 +255,7 @@ function PacketDot({
     const start = performance.now();
     let arrived = false;
     let frame = 0;
+    const history: Point[] = [];
 
     const step = (now: number) => {
       let elapsed = now - start;
@@ -280,6 +293,16 @@ function PacketDot({
         element?.setAttribute("cy", String(point.y));
         element?.setAttribute("fill", colour);
       }
+      history.push(point);
+      if (history.length > TAIL * 2) history.shift();
+      tail.current.forEach((element, i) => {
+        // Every second recorded position, so the tail stretches a little.
+        const p = history[history.length - 1 - (i + 1) * 2];
+        if (!element || !p) return;
+        element.setAttribute("cx", String(p.x));
+        element.setAttribute("cy", String(p.y));
+        element.setAttribute("fill", colour);
+      });
       frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
@@ -295,8 +318,20 @@ function PacketDot({
 
   return (
     <g>
-      <circle ref={halo} r={11} opacity={0.22} cx={-20} cy={-20} />
-      <circle ref={dot} r={5} cx={-20} cy={-20} />
+      {Array.from({ length: TAIL }, (_, i) => (
+        <circle
+          key={i}
+          ref={(element) => {
+            tail.current[i] = element;
+          }}
+          r={5 - i * 0.7}
+          opacity={0.5 - i * 0.08}
+          cx={-40}
+          cy={-40}
+        />
+      ))}
+      <circle ref={halo} r={14} opacity={0.25} cx={-40} cy={-40} />
+      <circle ref={dot} r={6.5} cx={-40} cy={-40} />
     </g>
   );
 }
@@ -455,9 +490,9 @@ export function DeliveryMap({
       {/* Dead-letter tray */}
       <motion.g
         key={`tray-${trayBump}`}
-        initial={reduced || trayBump === 0 ? false : { scale: 1.15 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 500, damping: 14 }}
+        initial={reduced || trayBump === 0 ? false : { scale: 1.15, x: 0 }}
+        animate={reduced || trayBump === 0 ? { scale: 1 } : { scale: 1, x: [0, -5, 5, -3, 3, 0] }}
+        transition={{ scale: { type: "spring", stiffness: 500, damping: 14 }, x: { duration: 0.4 } }}
         style={{ transformOrigin: `${tray.x}px ${tray.y}px` }}
       >
         <rect x={tray.x - 40} y={tray.y - 24} width={80} height={48} rx={8} fill="var(--color-bad-soft)" stroke="var(--color-bad)" strokeDasharray="4 3" />
@@ -465,7 +500,7 @@ export function DeliveryMap({
           {dead}
         </text>
         <text x={tray.x} y={tray.y + 15} textAnchor="middle" fontSize={11} fill="var(--color-fg-2)">
-          dead letters
+          {simulated ? "example" : "dead letters"}
         </text>
       </motion.g>
 
@@ -477,6 +512,19 @@ export function DeliveryMap({
         return (
           <motion.g key={endpoint.id} {...nodeIn(0.45 + i * 0.07)} style={{ transformOrigin: `${point.x}px ${point.y}px` }}>
             <AnimatePresence>
+              {flash && !reduced && (
+                <motion.circle
+                  key={`burst-${flash.key}`}
+                  cx={vertical ? point.x : point.x - nodeW / 2}
+                  cy={vertical ? point.y - 22 : point.y}
+                  fill="none"
+                  stroke={COLOUR[flash.outcome]}
+                  strokeWidth={2.5}
+                  initial={{ r: 4, opacity: 1 }}
+                  animate={{ r: 26, opacity: 0 }}
+                  transition={{ duration: 0.55, ease: "easeOut" }}
+                />
+              )}
               {flash && !reduced && (
                 <motion.rect
                   key={flash.key}
@@ -517,7 +565,9 @@ export function DeliveryMap({
               {truncate(endpoint.name, vertical ? 10 : 21)}
             </text>
             <text x={point.x - nodeW / 2 + (vertical ? 10 : 26)} y={point.y + 15} fontSize={vertical ? 10 : 12} fill="var(--color-fg-3)" style={{ fontFamily: "var(--font-mono)" }}>
-              {vertical ? `${endpoint.ok}✓ ${endpoint.failed}✕` : `${endpoint.ok} ok · ${endpoint.failed} failed`}
+              {vertical
+                ? `${endpoint.ok}✓ ${endpoint.failed}✕`
+                : `${simulated ? "example · " : ""}${endpoint.ok} ok · ${endpoint.failed} failed`}
             </text>
           </motion.g>
         );

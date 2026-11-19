@@ -164,12 +164,19 @@ function Hero({ data, endpoints }: { data: Overview; endpoints: Endpoint[] | und
   }, [endpoints, data.endpoints]);
 
   const simulate = data.attempts === 0;
-  const shownEndpoints = real.length ? real : SIMULATED;
+  const base = real.length ? real : SIMULATED;
   const traffic = useTraffic({
-    endpointIds: shownEndpoints.map((e) => e.id),
+    endpointIds: base.map((e) => e.id),
     updates,
     simulate,
   });
+  // Node counters move with the packets that land on them (real or example).
+  const shownEndpoints = base.map((endpoint, index) => ({
+    ...endpoint,
+    ok: endpoint.ok + (traffic.tally[index]?.ok ?? 0),
+    failed: endpoint.failed + (traffic.tally[index]?.failed ?? 0),
+  }));
+  const example = traffic.simulating;
   const mode = traffic.simulating ? "simulation" : traffic.live ? "live" : "quiet";
   const beacon = BEACON[mode];
   const counts = data.deliveries_by_status;
@@ -193,7 +200,7 @@ function Hero({ data, endpoints }: { data: Overview; endpoints: Endpoint[] | und
             waiting={counts.pending + counts.retrying + counts.in_flight}
             dead={counts.dead + traffic.deadLanded * (traffic.simulating ? 1 : 0)}
             vertical={narrow}
-            simulated={traffic.simulating || !real.length}
+            simulated={example}
           />
         </div>
 
@@ -209,19 +216,34 @@ function Hero({ data, endpoints }: { data: Overview; endpoints: Endpoint[] | und
           </h2>
           <p className="mt-3 text-[15px] leading-relaxed text-fg-2">{v.detail}</p>
 
-          <dl className="mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line">
-            <div className="bg-panel px-4 py-3">
-              <dt className="text-xs text-fg-3">Attempts, last minute</dt>
-              <dd className="font-display mt-1 text-[28px] font-semibold leading-none tracking-[-0.03em] text-fg">
+          {/* While the simulation runs these are example numbers, and look it:
+              dashed, tagged, and never in a state colour. */}
+          <dl
+            className={cx(
+              "mt-7 grid grid-cols-2 overflow-hidden rounded-lg",
+              example ? "border border-dashed border-line-strong" : "gap-px border border-line bg-line",
+            )}
+          >
+            <div className={cx("px-4 py-3", example ? "bg-[repeating-linear-gradient(135deg,transparent_0_6px,var(--color-hover)_6px_7px)]" : "bg-panel")}>
+              <dt className="flex items-center gap-2 text-xs text-fg-3">
+                Attempts, last minute
+                {example && <span className="rounded-[3px] border border-line-strong px-1 text-2xs uppercase tracking-wide">example</span>}
+              </dt>
+              <dd className={cx("font-display mt-1 text-[28px] font-semibold leading-none tracking-[-0.03em]", example ? "text-fg-2" : "text-fg")}>
                 <Odometer value={String(traffic.perMinute)} />
               </dd>
             </div>
-            <div className="bg-panel px-4 py-3">
-              <dt className="text-xs text-fg-3">Accepted, last minute</dt>
+            <div className={cx("px-4 py-3", example ? "bg-[repeating-linear-gradient(135deg,transparent_0_6px,var(--color-hover)_6px_7px)]" : "bg-panel")}>
+              <dt className="flex items-center gap-2 text-xs text-fg-3">
+                Accepted, last minute
+                {example && <span className="rounded-[3px] border border-line-strong px-1 text-2xs uppercase tracking-wide">example</span>}
+              </dt>
               <dd
                 className={cx(
                   "font-display mt-1 text-[28px] font-semibold leading-none tracking-[-0.03em]",
-                  traffic.successRate === null ? "text-fg-3" : TONE_TEXT[successTone(traffic.successRate) ?? "ok"],
+                  example || traffic.successRate === null
+                    ? "text-fg-2"
+                    : TONE_TEXT[successTone(traffic.successRate) ?? "ok"],
                 )}
               >
                 {traffic.successRate === null ? "—" : <Odometer value={`${Math.round(traffic.successRate * 100)}%`} />}

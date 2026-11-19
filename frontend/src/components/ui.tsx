@@ -11,7 +11,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { ApiError, errorMessage } from "../lib/api";
 import { useCountUp } from "../lib/motion";
-import { useMagnet, useSpotlight } from "./motionkit";
+import { RevealText, useMagnet, useSpotlight } from "./motionkit";
 import { CheckIcon, CloseIcon, CopyIcon } from "./icons";
 
 export function cx(...classes: (string | false | null | undefined)[]): string {
@@ -288,7 +288,9 @@ export function PageHeader({
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && <div className="mb-2">{eyebrow}</div>}
-        <h1 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-fg">{title}</h1>
+        <h1 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-fg">
+          <RevealText>{title}</RevealText>
+        </h1>
         {description && (
           <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-fg-2">{description}</p>
         )}

@@ -48,6 +48,13 @@ export function Layout() {
   // On a phone the account controls (theme, email, log out) fold into a menu
   // under the top bar. On wider screens they sit in the bar and this does nothing.
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const update = () => setScrolled(window.scrollY > 4);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
 
   // Choosing a page closes the menu.
   useEffect(() => {
@@ -72,7 +79,13 @@ export function Layout() {
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-30 border-b border-line bg-canvas/95 backdrop-saturate-150 supports-[backdrop-filter]:bg-canvas/90">
+      <header
+        className={cx(
+          // Solid, so nothing shows through it; the hairline appears once the page scrolls.
+          "sticky top-0 z-30 border-b bg-canvas transition-colors duration-200",
+          scrolled ? "border-line" : "border-transparent",
+        )}
+      >
         {/* The top bar: wordmark, organisation, account. */}
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 md:px-8">
           <Link to="/overview" className="flex shrink-0 items-center gap-2 rounded-md" aria-label="Relay home">

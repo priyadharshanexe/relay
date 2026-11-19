@@ -181,8 +181,12 @@ function MembersCard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line text-fg-2">
-              {members.data.map((member) => (
-                <tr key={member.user_id}>
+              {members.data.map((member, index) => (
+                <tr
+                  key={member.user_id}
+                  style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+                  className="animate-rise [animation-fill-mode:both]"
+                >
                   <td className="px-5 py-3 font-medium text-fg">
                     {member.email}
                     {isMe(member) && (
@@ -355,8 +359,12 @@ function InvitationsCard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line text-fg-2">
-              {invitations.data.map((invitation) => (
-                <tr key={invitation.id}>
+              {invitations.data.map((invitation, index) => (
+                <tr
+                  key={invitation.id}
+                  style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+                  className="animate-rise [animation-fill-mode:both]"
+                >
                   <td className="px-5 py-3 font-medium text-fg">{invitation.email}</td>
                   <td className="px-5 py-3">
                     <Badge tone={invitation.role === "viewer" ? "slate" : "blue"}>

@@ -13,7 +13,6 @@ import {
 import {
   Badge,
   Button,
-  Card,
   ConfirmDialog,
   CopyButton,
   EmptyState,
@@ -25,6 +24,8 @@ import {
   Notice,
   PageHeader,
 } from "../components/ui";
+import { useSpotlight } from "../components/motionkit";
+import { cx } from "../components/ui";
 import { useOverview } from "./OverviewPage";
 import { ApiError, api, fieldErrors } from "../lib/api";
 import { milliseconds, percent, timeAgo } from "../lib/format";
@@ -223,6 +224,7 @@ function EndpointRow({
   canEdit,
   onEdit,
   onSecret,
+  order = 0,
 }: {
   endpoint: Endpoint;
   health?: EndpointHealth;
@@ -230,8 +232,10 @@ function EndpointRow({
   canEdit: boolean;
   onEdit: () => void;
   onSecret: (title: string, secret: string) => void;
+  order?: number;
 }) {
   const queryClient = useQueryClient();
+  const spotlight = useSpotlight();
   const [confirm, setConfirm] = useState<"rotate-secret" | "delete" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -268,7 +272,14 @@ function EndpointRow({
     rate === null ? "text-fg-2" : rate >= 0.99 ? "text-ok" : rate >= 0.9 ? "text-warn" : "text-bad";
 
   return (
-    <li className="px-5 py-5">
+    <li
+      {...spotlight}
+      style={{ animationDelay: `${Math.min(order, 10) * 60}ms` }}
+      className={cx(
+        "spotlight animate-rise rounded-xl border bg-panel px-5 py-5 transition-[border-color,translate] duration-200 hover:-translate-y-0.5 [animation-fill-mode:both]",
+        endpoint.breaker_state === "open" ? "border-bad/40" : "border-line",
+      )}
+    >
       <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2.5">
@@ -447,11 +458,11 @@ export function EndpointsPage() {
         </EmptyState>
       )}
       {endpoints.data && endpoints.data.length > 0 && (
-        <Card>
-          <ul className="divide-y divide-line">
-            {endpoints.data.map((endpoint) => (
+        <ul className="grid gap-3">
+            {endpoints.data.map((endpoint, index) => (
               <EndpointRow
                 key={endpoint.id}
+                order={index}
                 endpoint={endpoint}
                 health={healthById.get(endpoint.id)}
                 series={seriesById.get(endpoint.id)}
@@ -460,8 +471,7 @@ export function EndpointsPage() {
                 onSecret={(title, value) => setSecret({ title, value })}
               />
             ))}
-          </ul>
-        </Card>
+        </ul>
       )}
 
       <Modal

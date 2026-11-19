@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { axisTop } from "./components/charts";
-import { groupStops, labelled, mergeCollidingLabels, nextNote, stopsOf } from "./components/Tracker";
+import { countdown, groupStops, labelled, mergeCollidingLabels, nextNote, stopsOf } from "./components/Tracker";
 import { attemptTime } from "./lib/time";
 import { CountUp } from "./components/ui";
 import { storedTheme, useTheme } from "./lib/theme";
@@ -182,13 +182,13 @@ describe("tracker groups and notes (review fixes)", () => {
   it("counts the next attempt from now, from the same next_attempt_at as the text", () => {
     const now = new Date("2026-03-10T20:00:00Z").getTime();
     const waiting = delivery({ next_attempt_at: "2026-03-11T01:00:00Z" });
-    expect(nextNote(waiting, now)).toBe("next in 5 h");
+    expect(nextNote(waiting, now)).toBe("next in 5:00:00");
   });
 
   it("says on hold when the endpoint is holding deliveries back", () => {
     const now = new Date("2026-03-10T20:00:00Z").getTime();
     const held = delivery({ next_attempt_at: "2026-03-11T01:00:00Z", endpoint_breaker_state: "open" });
-    expect(nextNote(held, now)).toBe("on hold · next in 5 h");
+    expect(nextNote(held, now)).toBe("on hold · next in 5:00:00");
     expect(nextNote({ ...held, endpoint_breaker_state: "closed", endpoint_status: "paused" }, now)).toContain("on hold");
   });
 
@@ -237,5 +237,17 @@ describe("tracker labels never overlap (review fix)", () => {
   it("never merges the next-attempt stop", () => {
     const groups = mergeCollidingLabels([group("#1", 0), { ...group("#9", 1, "next"), label: "Next" }], 1000);
     expect(groups.map((g) => g.label)).toEqual(["#1", "Next"]);
+  });
+});
+
+describe("the tracker countdown", () => {
+  it.each([
+    [18000, "5:00:00"],
+    [3661, "1:01:01"],
+    [95, "1:35"],
+    [5, "0:05"],
+    [-3, "0:00"],
+  ])("shows %i seconds as %s", (seconds, text) => {
+    expect(countdown(seconds)).toBe(text);
   });
 });

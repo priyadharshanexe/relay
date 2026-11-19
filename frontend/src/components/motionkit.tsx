@@ -10,6 +10,7 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -229,3 +230,36 @@ export function StaggerItem({
 }
 
 export { SPRING };
+
+// ------------------------------------------------------------------ decode
+const GLYPHS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789_-";
+
+/**
+ * Text that decodes into place: characters resolve left to right out of
+ * random glyphs. Used when a secret or id is revealed, so the reveal reads as
+ * the value arriving rather than just appearing.
+ */
+export function ScrambleText({ text, durationMs = 700 }: { text: string; durationMs?: number }) {
+  const [shown, setShown] = useState(() => (prefersReducedMotion() ? text : ""));
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      setShown(text);
+      return;
+    }
+    const start = performance.now();
+    let frame = 0;
+    const step = (now: number) => {
+      const t = Math.min((now - start) / durationMs, 1);
+      const settled = Math.floor(t * text.length);
+      let out = text.slice(0, settled);
+      for (let i = settled; i < text.length; i++) {
+        out += text[i] === " " ? " " : GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+      }
+      setShown(out);
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [text, durationMs]);
+  return <>{shown}</>;
+}

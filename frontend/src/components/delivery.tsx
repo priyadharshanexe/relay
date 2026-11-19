@@ -69,8 +69,12 @@ export function DeliveryTable({ deliveries }: { deliveries: Delivery[] }) {
           </tr>
         </thead>
         <tbody className={TBODY}>
-          {deliveries.map((delivery) => (
-            <tr key={delivery.id} className={cx(TR, "group relative")}>
+          {deliveries.map((delivery, index) => (
+            <tr
+              key={delivery.id}
+              style={{ animationDelay: `${Math.min(index, 14) * 28}ms` }}
+              className={cx(TR, "group relative animate-rise [animation-fill-mode:both]")}
+            >
               <td className={cx(TD, "whitespace-nowrap")}>
                 <DeliveryStatusBadge status={delivery.status} />
               </td>

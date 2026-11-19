@@ -4,10 +4,10 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { SecretReveal } from "../components/SecretReveal";
 import { PlusIcon, ReceiverIcon } from "../components/icons";
+import { useSpotlight } from "../components/motionkit";
 import {
   Badge,
   Button,
-  Card,
   ConfirmDialog,
   CopyButton,
   EmptyState,
@@ -53,12 +53,15 @@ function ReceiverRow({
   receiver,
   canEdit,
   connected,
+  order = 0,
 }: {
   receiver: Receiver;
   canEdit: boolean;
   /** Whether an endpoint already delivers to this receiver. Unknown while loading. */
   connected: boolean | undefined;
+  order?: number;
 }) {
+  const spotlight = useSpotlight();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -93,7 +96,11 @@ function ReceiverRow({
       : `${receiver.requests_received} request${receiver.requests_received === 1 ? "" : "s"} received`;
 
   return (
-    <li className="grid gap-x-10 gap-y-4 px-5 py-5 md:grid-cols-[minmax(0,1fr)_15rem]">
+    <li
+      {...spotlight}
+      style={{ animationDelay: `${Math.min(order, 10) * 60}ms` }}
+      className="spotlight grid animate-rise gap-x-10 gap-y-4 rounded-xl border border-line bg-panel px-5 py-5 transition-transform duration-200 hover:-translate-y-0.5 md:grid-cols-[minmax(0,1fr)_15rem] [animation-fill-mode:both]"
+    >
       <div className="min-w-0">
         <div className="flex items-center gap-2.5">
           <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${MODE_DOT[receiver.mode]}`} />
@@ -278,18 +285,17 @@ export function ReceiversPage() {
         </EmptyState>
       )}
       {receivers.data && receivers.data.length > 0 && (
-        <Card>
-          <ul className="divide-y divide-line">
-            {receivers.data.map((receiver) => (
+        <ul className="grid gap-3">
+            {receivers.data.map((receiver, index) => (
               <ReceiverRow
                 key={receiver.id}
+                order={index}
                 receiver={receiver}
                 canEdit={canEdit}
                 connected={endpointUrls?.has(receiver.url)}
               />
             ))}
-          </ul>
-        </Card>
+        </ul>
       )}
 
       <Modal title="Create test receiver" open={creating} onClose={() => setCreating(false)}>
