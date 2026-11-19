@@ -20,6 +20,7 @@ from relay.api import (
     metrics,
     orgs,
     receivers,
+    stats,
     stream,
 )
 from relay.core.config import Settings, get_settings
@@ -83,6 +84,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(events.router)
     v1.include_router(deliveries.router)
     v1.include_router(receivers.router)
+    v1.include_router(stats.router)
     v1.include_router(stream.router)
     app.include_router(v1)
     return app
