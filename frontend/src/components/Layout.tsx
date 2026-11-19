@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { motion } from "motion/react";
 import { useTheme } from "../lib/theme";
+import { SPRING } from "./motionkit";
 import { CloseIcon, Logo, LogoutIcon, MenuIcon, MoonIcon, SunIcon } from "./icons";
 import { cx } from "./ui";
 
@@ -161,16 +163,28 @@ export function Layout() {
                     <li key={to}>
                       <NavLink
                         to={to}
+                        viewTransition
                         className={({ isActive }) =>
                           cx(
-                            // The underline grows in under the chosen tab.
                             "relative flex h-11 items-center px-2.5 text-[13px] font-medium transition-colors duration-150",
-                            "after:absolute after:inset-x-2.5 after:bottom-0 after:h-[2px] after:origin-center after:rounded-full after:bg-accent after:transition-transform after:duration-200",
-                            isActive ? "text-fg after:scale-x-100" : "text-fg-2 after:scale-x-0 hover:text-fg",
+                            isActive ? "text-fg" : "text-fg-2 hover:text-fg",
                           )
                         }
                       >
-                        {label}
+                        {({ isActive }) => (
+                          <>
+                            {label}
+                            {/* One underline, shared by all tabs: it glides to the
+                                chosen one instead of appearing under it. */}
+                            {isActive && (
+                              <motion.span
+                                layoutId="tab-underline"
+                                transition={SPRING}
+                                className="absolute inset-x-2.5 -bottom-px h-[2px] rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]"
+                              />
+                            )}
+                          </>
+                        )}
                       </NavLink>
                     </li>
                   ))}
@@ -190,10 +204,8 @@ export function Layout() {
       )}
 
       <main id="main" className="mx-auto max-w-6xl px-4 py-8 md:px-8 md:py-12">
-        {/* Keyed on the page, so each page arrives with a short fade and rise. */}
-        <div key={location.pathname} className="animate-rise">
-          <Outlet />
-        </div>
+        {/* Page changes animate through the View Transitions API (see index.css). */}
+        <Outlet />
       </main>
     </div>
   );

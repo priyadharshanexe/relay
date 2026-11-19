@@ -3,7 +3,7 @@
 // Content-Security-Policy (script-src 'self') still allows it.
 try {
   var theme = localStorage.getItem("relay.theme");
-  document.documentElement.dataset.theme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";
 } catch (error) {
-  document.documentElement.dataset.theme = "light";
+  document.documentElement.dataset.theme = "dark";
 }

@@ -1,5 +1,5 @@
 /**
- * Light (the default) or dark. The choice is stored per browser and applied as
+ * Ink (dark, the default) or paper (light). The choice is stored per browser and applied as
  * data-theme on <html>; public/theme.js applies it again before the next page
  * load draws, so there is no flash of the wrong theme.
  */
@@ -11,9 +11,9 @@ const KEY = "relay.theme";
 
 export function storedTheme(): Theme {
   try {
-    return localStorage.getItem(KEY) === "dark" ? "dark" : "light";
+    return localStorage.getItem(KEY) === "light" ? "light" : "dark";
   } catch {
-    return "light";
+    return "dark";
   }
 }
 

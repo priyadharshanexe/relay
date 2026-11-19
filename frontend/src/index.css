@@ -15,7 +15,7 @@
  * Fonts: Bricolage Grotesque for headings and figures, IBM Plex Sans for text,
  * IBM Plex Mono only for data (ids, URLs, headers, signatures, status codes).
  *
- * Tokens are CSS variables with a light set (the default) and a dark set,
+ * Tokens are CSS variables: ink (dark, the default) and paper (light),
  * chosen with the theme switch (data-theme on <html>).
  */
 @theme {
@@ -71,8 +71,46 @@
   --animate-reveal: reveal 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-/* Light: the default. */
-:root {
+/* Ink: the default. Near-black with a warm undertone with vivid, high-contrast signal
+   colours, so live state reads from across the room. */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0e0c0a;
+  --card: #171411;
+  --field: #1e1a16;
+  --tint: #26211c;
+  --sunken: #080706;
+  --rule: #2a251f;
+  --rule-strong: #3b342c;
+  --ink: #f4f2ec;
+  --ink-2: #bdb6ab;
+  --ink-3: #958d81;
+  --signal: #ff6b1a;
+  --signal-hover: #ff8a47;
+  --signal-soft: rgb(255 107 26 / 0.14);
+  --signal-line: rgb(255 107 26 / 0.45);
+  --on-signal: #160900;
+  --state-ok: #2ee59d;
+  --state-ok-soft: rgb(46 229 157 / 0.13);
+  --state-warn: #ffb224;
+  --state-warn-soft: rgb(255 178 36 / 0.13);
+  --state-bad: #ff4d5e;
+  --state-bad-soft: rgb(255 77 94 / 0.14);
+  --state-flight: #5aa9ff;
+  --state-flight-soft: rgb(90 169 255 / 0.14);
+  --state-pending: #958d81;
+  --elevation: 0 0 0 1px rgb(255 255 255 / 0.06), 0 24px 60px -16px rgb(0 0 0 / 0.85);
+  --glow-signal: 0 0 0 1px rgb(255 107 26 / 0.5), 0 8px 32px -6px rgb(255 107 26 / 0.55);
+  --dot: rgb(255 255 255 / 0.055);
+  --json-key: #8fb8ff;
+  --json-string: #7ee8b4;
+  --json-number: #ffb86b;
+  --json-literal: #d9a6ff;
+}
+
+/* Paper: the light alternative, from the theme switch. */
+:root[data-theme="light"] {
   color-scheme: light;
   --paper: #f4f1ea;
   --card: #ffffff;
@@ -81,63 +119,30 @@
   --sunken: #eae6dc;
   --rule: #e2dccf;
   --rule-strong: #cfc8b8;
-  --ink: #1a1915;
-  --ink-2: #57544c;
-  --ink-3: #6f6b62;
+  --ink: #16150f;
+  --ink-2: #4f4c44;
+  --ink-3: #6a665c;
   --signal: #c2410c;
   --signal-hover: #a3360a;
-  --signal-soft: rgb(194 65 12 / 0.08);
-  --signal-line: rgb(194 65 12 / 0.32);
+  --signal-soft: rgb(194 65 12 / 0.09);
+  --signal-line: rgb(194 65 12 / 0.35);
   --on-signal: #ffffff;
-  --state-ok: #15803d;
-  --state-ok-soft: rgb(21 128 61 / 0.09);
-  --state-warn: #a16207;
-  --state-warn-soft: rgb(161 98 7 / 0.1);
-  --state-bad: #b91c1c;
-  --state-bad-soft: rgb(185 28 28 / 0.08);
+  --state-ok: #0f7a3d;
+  --state-ok-soft: rgb(15 122 61 / 0.1);
+  --state-warn: #9a5b05;
+  --state-warn-soft: rgb(154 91 5 / 0.11);
+  --state-bad: #b3171b;
+  --state-bad-soft: rgb(179 23 27 / 0.08);
   --state-flight: #1d4ed8;
-  --state-flight-soft: rgb(29 78 216 / 0.08);
+  --state-flight-soft: rgb(29 78 216 / 0.09);
   --state-pending: #6b6a64;
-  --elevation: 0 1px 2px rgb(26 25 21 / 0.06), 0 14px 36px -10px rgb(26 25 21 / 0.22);
+  --elevation: 0 1px 2px rgb(26 25 21 / 0.06), 0 18px 44px -12px rgb(26 25 21 / 0.25);
+  --glow-signal: 0 0 0 1px rgb(194 65 12 / 0.4), 0 8px 24px -8px rgb(194 65 12 / 0.45);
+  --dot: rgb(26 25 21 / 0.07);
   --json-key: #1d4ed8;
   --json-string: #15803d;
   --json-number: #a3360a;
   --json-literal: #7c3aed;
-}
-
-/* Dark: the same roles, retuned for a dark page. Chosen with the theme switch;
-   light stays the default whatever the system setting. */
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --paper: #141412;
-  --card: #1c1c19;
-  --field: #22221f;
-  --tint: #2a2a26;
-  --sunken: #0f0f0d;
-  --rule: #2e2d29;
-  --rule-strong: #3d3c36;
-  --ink: #edeae2;
-  --ink-2: #b1ada2;
-  --ink-3: #8f8b81;
-  --signal: #f07b3f;
-  --signal-hover: #f4925e;
-  --signal-soft: rgb(240 123 63 / 0.12);
-  --signal-line: rgb(240 123 63 / 0.4);
-  --on-signal: #1a1208;
-  --state-ok: #5bc48a;
-  --state-ok-soft: rgb(91 196 138 / 0.12);
-  --state-warn: #e3ac4c;
-  --state-warn-soft: rgb(227 172 76 / 0.12);
-  --state-bad: #f07070;
-  --state-bad-soft: rgb(240 112 112 / 0.12);
-  --state-flight: #86a8f6;
-  --state-flight-soft: rgb(134 168 246 / 0.12);
-  --state-pending: #9a968c;
-  --elevation: 0 0 0 1px rgb(255 255 255 / 0.05), 0 18px 44px -12px rgb(0 0 0 / 0.75);
-  --json-key: #9db8ff;
-  --json-string: #9fdcb5;
-  --json-number: #f3b98b;
-  --json-literal: #d6a7ff;
 }
 
 @keyframes flash {
@@ -230,6 +235,9 @@
 
 body {
   @apply bg-canvas font-sans text-fg antialiased;
+  background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-attachment: fixed;
   font-size: 15px;
   text-rendering: optimizeLegibility;
 }
@@ -436,6 +444,114 @@ input:-webkit-autofill:focus {
 /* Numbers that line up in columns. */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* A light that follows the pointer across a card (--sx, --sy set from JS),
+   and the card's border lighting up near the pointer. */
+.spotlight {
+  position: relative;
+  isolation: isolate;
+}
+.spotlight::before,
+.spotlight::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+.spotlight::before {
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(360px circle at var(--sx, 50%) var(--sy, 50%), var(--color-accent-soft), transparent 65%);
+}
+.spotlight::after {
+  inset: -1px;
+  padding: 1px;
+  background: radial-gradient(220px circle at var(--sx, 50%) var(--sy, 50%), var(--color-accent-line), transparent 70%);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.spotlight:hover::before,
+.spotlight:hover::after {
+  opacity: 1;
+}
+
+/* Pulled a few pixels towards the cursor (--mx, --my), springing back on leave. */
+.magnetic {
+  translate: var(--mx, 0px) var(--my, 0px);
+  transition:
+    translate 220ms cubic-bezier(0.2, 0.8, 0.2, 1.4),
+    background-color 150ms,
+    box-shadow 200ms;
+}
+
+/* A path that carries traffic: small dashes flowing in the direction of travel. */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+.flow {
+  stroke-dasharray: 2 10;
+  animation: dash-flow 0.9s linear infinite;
+}
+
+/* The live beacon: rings that spread from a dot. */
+@keyframes beacon {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+.beacon::before,
+.beacon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: beacon 1.8s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+}
+.beacon::after {
+  animation-delay: 0.9s;
+}
+
+/* Page changes: the new page slides up out of a soft blur while the old one
+   steps back (View Transitions API; browsers without it simply swap). */
+::view-transition-old(root) {
+  animation: vt-out 180ms ease-in both;
+}
+::view-transition-new(root) {
+  animation: vt-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+    filter: blur(4px);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+}
+/* The header and tabs stay put while the page underneath changes. */
+header {
+  view-transition-name: app-header;
+}
+::view-transition-group(app-header) {
+  animation: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

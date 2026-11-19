@@ -75,8 +75,12 @@ export function DeliveryTable({ deliveries }: { deliveries: Delivery[] }) {
                 <DeliveryStatusBadge status={delivery.status} />
               </td>
               <td className={cx(TD, "max-w-sm")}>
+                {/* Shares a view-transition name with the detail page's title, so the
+                    event name glides into place when the delivery opens. */}
                 <Link
                   to={`/deliveries/${delivery.id}`}
+                  viewTransition
+                  style={{ viewTransitionName: `event-${delivery.id}` }}
                   className="font-mono text-xs font-medium text-fg transition-colors after:absolute after:inset-0 group-hover:text-accent"
                 >
                   {delivery.event_type}

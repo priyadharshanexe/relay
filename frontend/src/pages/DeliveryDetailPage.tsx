@@ -238,6 +238,7 @@ export function DeliveryDetailPage() {
   const back = (
     <Link
       to="/deliveries"
+      viewTransition
       className="inline-flex items-center gap-1.5 text-xs font-medium text-fg-3 transition-colors hover:text-fg"
     >
       <ArrowLeftIcon width={13} height={13} />
@@ -275,7 +276,12 @@ export function DeliveryDetailPage() {
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-2xl font-medium tracking-[-0.02em] text-fg">{delivery.event_type}</h1>
+            <h1
+              className="font-mono text-2xl font-medium tracking-[-0.02em] text-fg"
+              style={{ viewTransitionName: `event-${delivery.id}` }}
+            >
+              {delivery.event_type}
+            </h1>
             <DeliveryStatusBadge status={delivery.status} />
           </div>
           <p className="mt-2 flex items-center gap-2 text-[13px] text-fg-3">

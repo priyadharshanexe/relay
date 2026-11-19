@@ -8,8 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { ApiError, errorMessage } from "../lib/api";
 import { useCountUp } from "../lib/motion";
+import { useMagnet, useSpotlight } from "./motionkit";
 import { CheckIcon, CloseIcon, CopyIcon } from "./icons";
 
 export function cx(...classes: (string | false | null | undefined)[]): string {
@@ -21,7 +23,7 @@ type Variant = "primary" | "secondary" | "danger" | "ghost";
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-accent text-on-accent shadow-[0_1px_0_rgb(0_0_0/0.12)] hover:bg-accent-hover disabled:opacity-45",
+    "magnetic bg-accent text-on-accent shadow-[0_1px_0_rgb(0_0_0/0.12)] hover:bg-accent-hover hover:shadow-[var(--glow-signal)] disabled:opacity-45 disabled:hover:shadow-none",
   secondary:
     "bg-panel text-fg border border-line-strong shadow-[0_1px_0_rgb(0_0_0/0.04)] hover:bg-hover disabled:text-fg-3 disabled:hover:bg-panel",
   danger: "bg-panel text-bad border border-bad/35 hover:bg-bad-soft disabled:opacity-50",
@@ -46,8 +48,10 @@ export function Button({
   type = "button",
   ...rest
 }: ButtonProps) {
+  const magnet = useMagnet();
   return (
     <button
+      {...(variant === "primary" ? magnet : {})}
       type={type}
       disabled={disabled || busy}
       aria-busy={busy || undefined}
@@ -314,8 +318,25 @@ export function SectionTitle({
   );
 }
 
-export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx("rounded-lg border border-line bg-panel", className)}>{children}</div>;
+export function Card({
+  children,
+  className,
+  interactive = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** Lights up under the pointer: for cards you act on. */
+  interactive?: boolean;
+}) {
+  const spotlight = useSpotlight();
+  return (
+    <div
+      {...(interactive ? spotlight : {})}
+      className={cx("rounded-lg border border-line bg-panel", interactive && "spotlight", className)}
+    >
+      {children}
+    </div>
+  );
 }
 
 /** Shared table styling: quiet headers, hairline rows, a hover that only hints. */
@@ -383,11 +404,18 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
       title={copied ? "Copied" : label}
       className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg active:scale-90"
     >
-      {copied ? (
-        <CheckIcon className="animate-pop text-ok" width={14} height={14} />
-      ) : (
-        <CopyIcon width={14} height={14} />
-      )}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={copied ? "done" : "copy"}
+          initial={{ scale: 0.4, rotate: -45, opacity: 0 }}
+          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+          exit={{ scale: 0.4, rotate: 45, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 28 }}
+          className="inline-flex"
+        >
+          {copied ? <CheckIcon className="text-ok" width={14} height={14} /> : <CopyIcon width={14} height={14} />}
+        </motion.span>
+      </AnimatePresence>
     </button>
   );
 }

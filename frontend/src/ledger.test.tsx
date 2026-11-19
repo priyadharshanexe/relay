@@ -132,16 +132,16 @@ describe("the theme", () => {
     delete document.documentElement.dataset.theme;
   });
 
-  it("is light by default and switches to dark, remembered for next time", async () => {
+  it("is ink (dark) by default and switches to paper, remembered for next time", async () => {
     const user = userEvent.setup();
     render(<ThemeProbe />);
-    expect(screen.getByRole("button")).toHaveTextContent("light");
+    expect(screen.getByRole("button")).toHaveTextContent("dark");
 
     await user.click(screen.getByRole("button"));
 
-    expect(screen.getByRole("button")).toHaveTextContent("dark");
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(storedTheme()).toBe("dark");
+    expect(screen.getByRole("button")).toHaveTextContent("light");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(storedTheme()).toBe("light");
   });
 });
 

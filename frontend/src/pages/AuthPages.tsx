@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SESSION_QUERY_KEY } from "../auth/AuthProvider";
+import { DispatchBackdrop } from "../components/DispatchBackdrop";
 import { Logo } from "../components/icons";
 import { Button, ErrorState, Field, Input, LoadingState } from "../components/ui";
 import { api, fieldErrors, setCurrentOrgId } from "../lib/api";
@@ -35,14 +36,15 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center px-5 py-10 sm:py-16">
-      <Link to="/login" className="mb-10 flex items-center gap-2.5 rounded-md">
+    <div className="relative isolate flex min-h-screen flex-col items-center overflow-hidden px-5 py-10 sm:py-16">
+      <DispatchBackdrop />
+      <Link to="/login" className="relative mb-10 flex items-center gap-2.5 rounded-md">
         <Logo className="h-7 w-7" />
         <span className="font-display text-xl font-semibold tracking-[-0.03em]">Relay</span>
       </Link>
 
-      <div className="w-full max-w-[400px] animate-rise">
-        <div className="rounded-lg border border-line bg-panel shadow-[0_1px_2px_rgb(26_25_21/0.05)]">
+      <div className="relative w-full max-w-[400px] animate-rise">
+        <div className="rounded-xl border border-line-strong bg-panel shadow-pop">
           <div className="px-7 pb-7 pt-6">
             <h1 className="mb-6 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>
             {children}
