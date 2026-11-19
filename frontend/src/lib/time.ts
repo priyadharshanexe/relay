@@ -9,3 +9,12 @@ export function gap(seconds: number): string {
   const hours = seconds / 3600;
   return `${hours < 10 ? Math.round(hours * 10) / 10 : Math.round(hours)} h`;
 }
+
+/** "21:36:01" today; "18 Nov, 21:36:01" on any other day, so a time is never
+ *  mistaken for today's. */
+export function attemptTime(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  const time = date.toLocaleTimeString([], { hourCycle: "h23" });
+  if (date.toDateString() === now.toDateString()) return time;
+  return `${date.toLocaleDateString([], { day: "numeric", month: "short" })}, ${time}`;
+}

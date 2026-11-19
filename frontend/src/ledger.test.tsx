@@ -2,7 +2,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { labelled, stopsOf } from "./components/Tracker";
+import { axisTop } from "./components/charts";
+import { groupStops, labelled, nextNote, stopsOf } from "./components/Tracker";
+import { attemptTime } from "./lib/time";
 import { CountUp } from "./components/ui";
 import { storedTheme, useTheme } from "./lib/theme";
 import type { DeliveryDetail, Overview } from "./lib/types";
@@ -147,5 +149,64 @@ describe("counting figures", () => {
   it("show their final value at once when motion is reduced", () => {
     render(<CountUp value={1234} />);
     expect(screen.getByText("1,234")).toBeInTheDocument();
+  });
+});
+
+describe("tracker groups and notes (review fixes)", () => {
+  it("merges stops closer than the threshold into one, labelled with the range", () => {
+    const stops = stopsOf(
+      delivery({
+        status: "dead",
+        attempt_log: [1, 2, 3, 4, 5].map((number) => ({
+          id: `a${number}`,
+          attempt_number: number,
+          started_at: `2026-03-10T12:0${number}:00Z`,
+          duration_ms: 10,
+          status_code: 500,
+          error_kind: "http_status" as const,
+          response_snippet: null,
+          request_headers: {},
+          response_headers: null,
+        })),
+      }),
+    );
+    // Created, #1-#4 bunched at the start, #5 far out, then the dead letter.
+    const positions = [0, 1, 2, 3, 4, 60, 60];
+    const groups = groupStops(stops, positions, 5);
+    expect(groups.map((group) => group.label)).toEqual(["#1–#4", "#5", "Dead letter"]);
+    expect(groups[0]?.kind).toBe("failed");
+    // The end stop never joins a group, even when it sits on the last attempt.
+    expect(groups.at(-1)?.stops).toHaveLength(1);
+  });
+
+  it("counts the next attempt from now, from the same next_attempt_at as the text", () => {
+    const now = new Date("2026-03-10T20:00:00Z").getTime();
+    const waiting = delivery({ next_attempt_at: "2026-03-11T01:00:00Z" });
+    expect(nextNote(waiting, now)).toBe("next in 5 h");
+  });
+
+  it("says on hold when the endpoint is holding deliveries back", () => {
+    const now = new Date("2026-03-10T20:00:00Z").getTime();
+    const held = delivery({ next_attempt_at: "2026-03-11T01:00:00Z", endpoint_breaker_state: "open" });
+    expect(nextNote(held, now)).toBe("on hold · next in 5 h");
+    expect(nextNote({ ...held, endpoint_breaker_state: "closed", endpoint_status: "paused" }, now)).toContain("on hold");
+  });
+
+  it("has no note once the delivery is finished", () => {
+    expect(nextNote(delivery({ status: "succeeded" }))).toBeNull();
+  });
+});
+
+describe("chart axes and times (review fixes)", () => {
+  it("leave headroom above the tallest value", () => {
+    expect(axisTop([80])).toBe(100); // 80 x 1.15 = 92 -> 100
+    expect(axisTop([7])).toBe(10); // 8.05 -> 10, not 8
+    expect(axisTop([])).toBe(4);
+  });
+
+  it("date an attempt time that is not from today", () => {
+    const now = new Date("2026-03-11T09:00:00");
+    expect(attemptTime("2026-03-11T08:30:00", now)).not.toMatch(/,/);
+    expect(attemptTime("2026-03-10T21:36:01", now)).toMatch(/10.*21:36:01/);
   });
 });

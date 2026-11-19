@@ -1,55 +1,50 @@
 /**
  * A delivery's journey drawn like a parcel tracker: a line from "created" to
- * "delivered" (or to the next attempt, or the dead-letter queue), with a stop
- * for every attempt.
+ * the end (delivered, the dead-letter queue, or the next scheduled attempt),
+ * with a stop for every attempt.
  *
  * Stops sit at their real time after creation, on a square-root scale: retries
  * back off from seconds to hours, and on a linear scale the early attempts would
- * pile up at the start. The waits between stops are written on the line, so the
- * backoff schedule reads directly.
+ * pile up at the start. Stops closer together than a fingertip are merged into
+ * one ("#1–#4"); the full list is right below the tracker.
+ *
+ * While a delivery is still on its way, a "now" tick sits on the line and the
+ * last stretch says when the next attempt is due, counted from now, from the
+ * same next_attempt_at the page shows in words. If the endpoint is holding
+ * deliveries back, the stretch says "on hold".
  */
 import { useEffect, useRef, useState } from "react";
 import { fullDate } from "../lib/format";
-import type { DeliveryDetail } from "../lib/types";
 import { gap } from "../lib/time";
+import type { DeliveryDetail } from "../lib/types";
 import { cx } from "./ui";
 
-interface Stop {
+export interface Stop {
   key: string;
   at: number; // ms since creation
-  kind: "created" | "ok" | "failed" | "next" | "delivered" | "dead";
+  kind: "created" | "ok" | "failed" | "next" | "dead";
   label: string;
   title: string;
 }
 
-// Room needed, in pixels, for a stop label and for a wait written on the line.
-const LABEL_PX = 56;
-const GAP_PX = 64;
+/** Stops closer than this many pixels are drawn as one, so every stop that is
+ *  drawn has room for its label (a merged one reads "#1–#4"). */
+export const MERGE_PX = 44;
+const LABEL_PX = 44; // room a stop label needs
+const NOTE_PX = 96; // room a note on the line needs
 
-/** Which stops get a label: each one far enough from the last labelled stop,
- *  and always the final stop (its neighbour gives way if they would touch). */
-export function labelled(positions: number[], minLabel = 6): boolean[] {
-  const shown = positions.map(() => false);
-  let lastShown = -Infinity;
-  let lastIndex = -1;
-  positions.forEach((position, index) => {
-    const final = index === positions.length - 1;
-    if (position - lastShown >= minLabel) {
-      shown[index] = true;
-      lastShown = position;
-      lastIndex = index;
-    } else if (final) {
-      if (lastIndex > 0) shown[lastIndex] = false;
-      shown[index] = true;
-    }
-  });
-  return shown;
+/** Endpoint states in which deliveries wait without being attempted. */
+export function onHold(delivery: DeliveryDetail): boolean {
+  return (
+    (delivery.status === "pending" || delivery.status === "retrying") &&
+    (delivery.endpoint_status !== "active" || delivery.endpoint_breaker_state !== "closed")
+  );
 }
 
 export function stopsOf(delivery: DeliveryDetail, now = Date.now()): Stop[] {
   const created = new Date(delivery.created_at).getTime();
   const stops: Stop[] = [
-    { key: "created", at: 0, kind: "created", label: "Created", title: fullDate(delivery.created_at) },
+    { key: "created", at: 0, kind: "created", label: "Created", title: `Created ${fullDate(delivery.created_at)}` },
   ];
   for (const attempt of delivery.attempt_log) {
     const ok = attempt.error_kind === null;
@@ -68,6 +63,7 @@ export function stopsOf(delivery: DeliveryDetail, now = Date.now()): Stop[] {
     const next = new Date(delivery.next_attempt_at).getTime() - created;
     stops.push({
       key: "next",
+      // Never before now: an attempt that is due is about to happen.
       at: Math.max(next, last, now - created),
       kind: "next",
       label: "Next",
@@ -79,12 +75,77 @@ export function stopsOf(delivery: DeliveryDetail, now = Date.now()): Stop[] {
   return stops;
 }
 
+export interface Group {
+  stops: Stop[];
+  position: number; // percent along the line
+  kind: Stop["kind"];
+  label: string;
+  title: string;
+}
+
+/**
+ * Stops within `mergePercent` of a group's first stop join that group. The end
+ * stop (next attempt, dead letter) always stays on its own, so where the
+ * delivery stands is never hidden in a group.
+ */
+export function groupStops(stops: Stop[], positions: number[], mergePercent: number): Group[] {
+  const groups: Group[] = [];
+  stops.forEach((stop, index) => {
+    const position = positions[index] ?? 0;
+    const current = groups.at(-1);
+    const isEnd = stop.kind === "next" || stop.kind === "dead";
+    if (current && !isEnd && current.kind !== "next" && position - current.position < mergePercent) {
+      current.stops.push(stop);
+      return;
+    }
+    groups.push({ stops: [stop], position, kind: stop.kind, label: stop.label, title: stop.title });
+  });
+  for (const group of groups) {
+    const attempts = group.stops.filter((stop) => stop.kind === "ok" || stop.kind === "failed");
+    if (group.stops.length === 1) continue;
+    group.kind = attempts.some((stop) => stop.kind === "failed") ? "failed" : attempts.length ? "ok" : group.kind;
+    group.label =
+      attempts.length > 1
+        ? `${attempts[0]?.label}–${attempts.at(-1)?.label}`
+        : (attempts[0]?.label ?? group.label);
+    group.title = group.stops.map((stop) => stop.title).join("\n");
+  }
+  return groups;
+}
+
+/** Which groups get a label: each far enough from the last labelled one, and
+ *  always the final group (its neighbour gives way if they would touch). */
+export function labelled(positions: number[], minLabel = 6): boolean[] {
+  const shown = positions.map(() => false);
+  let lastShown = -Infinity;
+  let lastIndex = -1;
+  positions.forEach((position, index) => {
+    const final = index === positions.length - 1;
+    if (position - lastShown >= minLabel) {
+      shown[index] = true;
+      lastShown = position;
+      lastIndex = index;
+    } else if (final) {
+      if (lastIndex > 0) shown[lastIndex] = false;
+      shown[index] = true;
+    }
+  });
+  return shown;
+}
+
+/** The note on the last stretch: when the next attempt is due, from now. */
+export function nextNote(delivery: DeliveryDetail, now = Date.now()): string | null {
+  if (delivery.status !== "pending" && delivery.status !== "retrying") return null;
+  const seconds = Math.round((new Date(delivery.next_attempt_at).getTime() - now) / 1000);
+  const when = seconds > 0 ? `next in ${gap(seconds)}` : "next attempt due now";
+  return onHold(delivery) ? `on hold · ${when}` : when;
+}
+
 const DOT: Record<Stop["kind"], string> = {
   created: "border-fg-3 bg-panel",
   ok: "border-ok bg-ok",
   failed: "border-bad bg-panel",
   next: "border-warn border-dashed bg-panel",
-  delivered: "border-ok bg-ok",
   dead: "border-bad bg-bad",
 };
 
@@ -104,69 +165,112 @@ function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
 
 export function Tracker({ delivery }: { delivery: DeliveryDetail }) {
   const [track, width] = useWidth();
-  const minLabel = (LABEL_PX / width) * 100;
-  const minGap = (GAP_PX / width) * 100;
-  const stops = stopsOf(delivery);
+  const now = Date.now();
+  const stops = stopsOf(delivery, now);
   const span = Math.max(...stops.map((stop) => stop.at), 1);
   // Square-root scale; the final stop sits at the right end.
-  const position = (at: number) => (Math.sqrt(at) / Math.sqrt(span)) * 100;
+  const position = (at: number) => (Math.sqrt(Math.max(at, 0)) / Math.sqrt(span)) * 100;
+  const groups = groupStops(stops, stops.map((stop) => position(stop.at)), (MERGE_PX / width) * 100);
+  const showLabel = labelled(groups.map((group) => group.position), (LABEL_PX / width) * 100);
+  const minNote = (NOTE_PX / width) * 100;
+
   const finished = delivery.status === "succeeded" || delivery.status === "dead";
-  const lastPosition = position(stops.at(-1)?.at ?? 0);
-  const showLabel = labelled(stops.map((stop) => position(stop.at)), minLabel);
+  const nowPosition = finished ? null : position(now - new Date(delivery.created_at).getTime());
+  const travelled = nowPosition ?? groups.at(-1)?.position ?? 0;
+  const note = nextNote(delivery, now);
 
   return (
     <figure className="mb-10">
       <figcaption className="sr-only">
-        {delivery.attempt_log.length} attempt{delivery.attempt_log.length === 1 ? "" : "s"} so far.
+        {delivery.attempt_log.length} attempt{delivery.attempt_log.length === 1 ? "" : "s"} so far
+        {note ? `; ${note}` : ""}.
       </figcaption>
       <div ref={track} aria-hidden="true" className="relative mx-3 h-16">
-        {/* The route: solid where the delivery has been, dashed where it is still going. */}
-        <div className="absolute inset-x-0 top-[22px] h-0.5 bg-line" />
+        {/* The route: solid up to now, dashed for what is still to come. */}
+        <div className="absolute inset-x-0 top-[22px] border-t-2 border-dashed border-line-strong" />
         <div
-          className={cx("absolute left-0 top-[22px] h-0.5 animate-reveal", finished ? (delivery.status === "dead" ? "bg-bad/60" : "bg-ok/70") : "bg-fg-3/50")}
-          style={{ width: `${lastPosition}%` }}
+          className={cx(
+            "absolute left-0 top-[22px] h-0.5 animate-reveal",
+            finished ? (delivery.status === "dead" ? "bg-bad/60" : "bg-ok/70") : "bg-fg-3/60",
+          )}
+          style={{ width: `${travelled}%` }}
         />
-        {stops.map((stop, index) => {
-          const left = position(stop.at);
-          const previous = stops[index - 1];
-          const between = previous ? left - position(previous.at) : 0;
+
+        {/* Waits between stops, written on the line. */}
+        {groups.map((group, index) => {
+          const previous = groups[index - 1];
+          if (!previous || group.kind === "next" || group.kind === "dead") return null;
+          const between = group.position - previous.position;
+          if (between < minNote) return null;
+          const wait = (group.stops[0]?.at ?? 0) - (previous.stops.at(-1)?.at ?? 0);
           return (
-            <div key={stop.key}>
-              {/* The wait since the previous stop, written on the line. */}
-              {previous && between >= minGap && stop.kind !== "dead" && (
-                <span
-                  className="tabular absolute top-0 -translate-x-1/2 animate-fade whitespace-nowrap font-mono text-2xs text-fg-3 [animation-fill-mode:both]"
-                  style={{ left: `${position(previous.at) + between / 2}%`, animationDelay: `${300 + index * 110}ms` }}
-                >
-                  +{gap(Math.round((stop.at - previous.at) / 1000))}
-                </span>
+            <span
+              key={`wait-${group.stops[0]?.key}`}
+              className="tabular absolute top-0 -translate-x-1/2 animate-fade whitespace-nowrap font-mono text-2xs text-fg-3 [animation-fill-mode:both]"
+              style={{ left: `${previous.position + between / 2}%`, animationDelay: `${300 + index * 110}ms` }}
+            >
+              +{gap(Math.max(Math.round(wait / 1000), 0))}
+            </span>
+          );
+        })}
+
+        {/* Now, and the note on the last stretch. */}
+        {nowPosition !== null && (
+          <span
+            className="absolute top-[14px] h-[18px] w-0.5 -translate-x-1/2 animate-fade rounded-full bg-fg [animation-fill-mode:both]"
+            style={{ left: `${nowPosition}%`, animationDelay: `${groups.length * 110}ms` }}
+          />
+        )}
+        {note && nowPosition !== null && (
+          <span
+            className={cx(
+              "absolute top-0 animate-fade whitespace-nowrap font-mono text-2xs [animation-fill-mode:both]",
+              onHold(delivery) ? "text-warn" : "text-fg-3",
+              // Centred on the stretch when it is wide enough; otherwise right-aligned.
+              100 - nowPosition >= minNote ? "-translate-x-1/2" : "right-0",
+            )}
+            style={{
+              left: 100 - nowPosition >= minNote ? `${(nowPosition + 100) / 2}%` : undefined,
+              animationDelay: `${groups.length * 110 + 120}ms`,
+            }}
+          >
+            {note}
+          </span>
+        )}
+
+        {groups.map((group, index) => (
+          <div key={group.stops[0]?.key}>
+            <span
+              title={group.title}
+              className={cx(
+                "absolute top-4 h-3.5 w-3.5 -translate-x-1/2 animate-pop rounded-full border-2",
+                DOT[group.kind],
+                group.stops.length > 1 && "ring-2 ring-panel ring-offset-0 outline outline-1 outline-offset-2 outline-current",
+                group.kind === "next" && "animate-pulse",
+                group.kind === "failed" ? "text-bad/40" : group.kind === "ok" ? "text-ok/40" : "",
               )}
-              <span
-                title={stop.title}
-                className={cx(
-                  "absolute top-4 h-3.5 w-3.5 -translate-x-1/2 animate-pop rounded-full border-2",
-                  DOT[stop.kind],
-                  stop.kind === "next" && "animate-pulse",
-                )}
-                style={{ left: `${left}%`, animationDelay: `${index * 110}ms` }}
-              />
-              {showLabel[index] && (
+              style={{ left: `${group.position}%`, animationDelay: `${index * 110}ms` }}
+            />
+            {showLabel[index] && (
               <span
                 className={cx(
                   "absolute top-9 -translate-x-1/2 animate-fade whitespace-nowrap text-2xs [animation-fill-mode:both]",
-                  stop.kind === "failed" || stop.kind === "dead" ? "text-bad" : stop.kind === "ok" ? "text-ok" : "text-fg-3",
+                  group.kind === "failed" || group.kind === "dead"
+                    ? "text-bad"
+                    : group.kind === "ok"
+                      ? "text-ok"
+                      : "text-fg-3",
                   // The first and last labels hug the ends instead of overflowing.
                   index === 0 && "translate-x-[-6px]",
-                  index === stops.length - 1 && index > 0 && "-translate-x-[calc(100%-6px)]",
+                  index === groups.length - 1 && index > 0 && "-translate-x-[calc(100%-6px)]",
                 )}
-                style={{ left: `${left}%`, animationDelay: `${index * 110 + 80}ms` }}
+                style={{ left: `${group.position}%`, animationDelay: `${index * 110 + 80}ms` }}
               >
-                {stop.label}
+                {group.label}
               </span>
-              )}
-            </div>
-          );
-        })}
+            )}
+          </div>
+        ))}
       </div>
     </figure>
   );

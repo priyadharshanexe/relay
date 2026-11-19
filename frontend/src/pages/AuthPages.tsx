@@ -20,9 +20,9 @@ const LINK = "font-medium text-accent transition-colors hover:text-accent-hover"
 /** The three promises Relay makes, printed under the sign-in form like the
  *  tear-off strip of a dispatch slip. */
 const SLIP: [string, string][] = [
-  ["Signed", "Standard Webhooks"],
-  ["Retried", "up to 7 attempts"],
-  ["Kept", "replay any time"],
+  ["Signed", "HMAC-SHA256"],
+  ["Retried", "7 attempts"],
+  ["Kept", "replayable"],
 ];
 
 export function AuthShell({

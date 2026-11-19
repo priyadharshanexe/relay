@@ -234,9 +234,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-h1,
-h2,
-h3,
+/* In the base layer, so a utility such as font-mono on a heading still wins. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+  }
+}
+
 .font-display {
   font-family: var(--font-display);
   font-optical-sizing: auto;

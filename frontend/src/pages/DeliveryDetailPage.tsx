@@ -27,7 +27,7 @@ import {
 } from "../components/ui";
 import { ApiError, api } from "../lib/api";
 import { fullDate, milliseconds, timeAgo } from "../lib/format";
-import { gap } from "../lib/time";
+import { attemptTime, gap } from "../lib/time";
 import type { Attempt, Delivery, DeliveryDetail } from "../lib/types";
 
 export { gap } from "../lib/time";
@@ -131,7 +131,7 @@ function AttemptItem({
           )}
           <span className="tabular ml-auto text-xs text-fg-2">{milliseconds(attempt.duration_ms)}</span>
           <time className="tabular text-xs text-fg-3" dateTime={attempt.started_at} title={fullDate(attempt.started_at)}>
-            {new Date(attempt.started_at).toLocaleTimeString([], { hourCycle: "h23" })}
+            {attemptTime(attempt.started_at)}
           </time>
         </div>
         <button
