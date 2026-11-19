@@ -23,7 +23,7 @@ docker compose up --build
 | Prometheus | http://localhost:9090 (alerts under Alerts) |
 | Jaeger   | http://localhost:16686 (traces) |
 
-Postgres is published on host port 5433, not 5432, so it never clashes with a Postgres you may already have installed. The API port is published on this machine only (`127.0.0.1`); visitors reach the API through the dashboard's address.
+Postgres is published on host port 5433, not 5432, so it never clashes with a Postgres you may already have installed. If a port is already taken on your machine, pick another with `RELAY_API_HOST_PORT`, `RELAY_POSTGRES_HOST_PORT` or `RELAY_REDIS_HOST_PORT` (in `.env` or the environment), for example `RELAY_API_HOST_PORT=8001 docker compose up`. The API port is published on this machine only (`127.0.0.1`); visitors reach the API through the dashboard's address.
 
 ### Demo data
 

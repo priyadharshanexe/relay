@@ -85,7 +85,7 @@ services:
       # else can reach the API directly to spoof it either.
       FORWARDED_ALLOW_IPS: "*"
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${RELAY_API_HOST_PORT:-8000}:8000"
 
   # The dashboard: http://localhost:8080
   web:
