@@ -34,7 +34,7 @@ function Tooltip({ children, align }: { children: React.ReactNode; align: "left"
     <div
       role="tooltip"
       className={cx(
-        "pointer-events-none absolute bottom-full z-10 mb-2 w-max min-w-36 animate-rise rounded-lg border border-line-strong bg-raised px-3 py-2 text-xs shadow-pop",
+        "pointer-events-none absolute bottom-full z-10 mb-2 w-max min-w-36 animate-fade rounded-md border border-line-strong bg-panel px-3 py-2 text-xs shadow-pop",
         align === "left" ? "left-0" : "right-0",
       )}
     >
@@ -81,20 +81,25 @@ export function AttemptsChart({ buckets }: { buckets: StatsBucket[] }) {
                   onMouseEnter={() => setHovered(index)}
                 >
                   {active && (
-                    <div aria-hidden="true" className="absolute inset-x-[-1.5px] inset-y-0 rounded-sm bg-white/[0.03]" />
+                    <div aria-hidden="true" className="absolute inset-x-[-1.5px] inset-y-0 rounded-sm bg-hover/70" />
                   )}
                   <div
                     className={cx(
-                      "relative flex flex-col justify-end overflow-hidden rounded-[3px] transition-opacity",
-                      hovered !== null && !active && "opacity-50",
+                      // Each bar grows up from the baseline, left to right.
+                      "relative flex origin-bottom animate-grow flex-col justify-end overflow-hidden rounded-[2px] transition-opacity",
+                      hovered !== null && !active && "opacity-45",
                     )}
-                    style={{ height: `${(sum / max) * 100}%`, minHeight: sum ? 2 : 0 }}
+                    style={{
+                      height: `${(sum / max) * 100}%`,
+                      minHeight: sum ? 2 : 0,
+                      animationDelay: `${index * 18}ms`,
+                    }}
                   >
                     {bucket.failed > 0 && (
                       <div className="bg-bad" style={{ height: `${(bucket.failed / sum) * 100}%`, minHeight: 2 }} />
                     )}
                     {bucket.succeeded > 0 && (
-                      <div className="flex-1 bg-accent" />
+                      <div className="flex-1 bg-ok" />
                     )}
                   </div>
                   {active && (
@@ -102,7 +107,7 @@ export function AttemptsChart({ buckets }: { buckets: StatsBucket[] }) {
                       <p className="mb-1.5 font-medium text-fg">{hourLabel(bucket.start)}</p>
                       <p className="flex justify-between gap-4 text-fg-2">
                         <span className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-sm bg-accent" /> Delivered
+                          <span className="h-2 w-2 rounded-sm bg-ok" /> Delivered
                         </span>
                         <span className="tabular text-fg">{bucket.succeeded}</span>
                       </p>
@@ -180,7 +185,7 @@ export function LatencyChart({ buckets }: { buckets: StatsBucket[] }) {
           <span>{milliseconds(max)}</span>
           <span>0</span>
         </div>
-        <div className="relative h-36 flex-1" onMouseLeave={() => setHovered(null)}>
+        <div className="relative h-36 flex-1 animate-reveal" onMouseLeave={() => setHovered(null)}>
           <div aria-hidden="true" className="absolute inset-0 flex flex-col justify-between">
             <div className="border-t border-dashed border-line" />
             <div className="border-t border-line-strong" />
@@ -196,7 +201,7 @@ export function LatencyChart({ buckets }: { buckets: StatsBucket[] }) {
                 <path
                   d={line(points)}
                   fill="none"
-                  stroke="var(--color-accent)"
+                  stroke="var(--color-fg-2)"
                   strokeWidth="1.75"
                   strokeLinejoin="round"
                   strokeLinecap="round"
@@ -218,7 +223,7 @@ export function LatencyChart({ buckets }: { buckets: StatsBucket[] }) {
                 {bucket.p95_ms !== null && hovered !== index && (
                   <span
                     aria-hidden="true"
-                    className="absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent"
+                    className="absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fg-2"
                     style={{ top: `${(y(bucket.p95_ms) / height) * 100}%` }}
                   />
                 )}
@@ -228,7 +233,7 @@ export function LatencyChart({ buckets }: { buckets: StatsBucket[] }) {
                     {bucket.p95_ms !== null && (
                       <span
                         aria-hidden="true"
-                        className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-canvas"
+                        className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-fg bg-panel"
                         style={{ top: `${(y(bucket.p95_ms) / height) * 100}%` }}
                       />
                     )}
@@ -270,7 +275,7 @@ export function Sparkline({
           key={index}
           className={cx(
             "flex-1 rounded-[1px]",
-            total === 0 ? "bg-line" : (failed[index] ?? 0) > 0 ? "bg-bad" : "bg-accent/80",
+            total === 0 ? "bg-line" : (failed[index] ?? 0) > 0 ? "bg-bad" : "bg-ok/80",
           )}
           style={{ height: total === 0 ? 2 : `${Math.max((total / max) * 100, 12)}%` }}
         />
@@ -282,8 +287,8 @@ export function Sparkline({
 // ------------------------------------------------------- state distribution
 const STATE_ORDER: { status: DeliveryStatus; label: string; color: string }[] = [
   { status: "succeeded", label: "Succeeded", color: "bg-ok" },
-  { status: "pending", label: "Pending", color: "bg-fg-3" },
-  { status: "in_flight", label: "Sending", color: "bg-accent" },
+  { status: "pending", label: "Pending", color: "bg-pending" },
+  { status: "in_flight", label: "Sending", color: "bg-flight" },
   { status: "retrying", label: "Retrying", color: "bg-warn" },
   { status: "dead", label: "Dead", color: "bg-bad" },
 ];
@@ -293,7 +298,7 @@ export function StateBreakdown({ counts }: { counts: Record<DeliveryStatus, numb
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   return (
     <div>
-      <div aria-hidden="true" className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-line">
+      <div aria-hidden="true" className="flex h-2.5 animate-reveal gap-0.5 overflow-hidden rounded-[3px] bg-line">
         {total > 0 &&
           STATE_ORDER.filter(({ status }) => counts[status] > 0).map(({ status, color }) => (
             <div key={status} className={color} style={{ width: `${(counts[status] / total) * 100}%` }} />

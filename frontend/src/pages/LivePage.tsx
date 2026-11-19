@@ -154,8 +154,8 @@ export function LivePage() {
               </thead>
               <tbody className={TBODY}>
                 {updates.map((update) => (
-                  // New rows mount with a brief highlight; existing rows keep their key.
-                  <tr key={`${update.delivery_id}-${update.attempt}-${update.at}`} className="animate-flash">
+                  // New rows slide in from the top; existing rows keep their key and stay put.
+                  <tr key={`${update.delivery_id}-${update.attempt}-${update.at}`} className="animate-slide-in">
                     <td className={cx(TD, "tabular whitespace-nowrap font-mono text-xs text-fg-3")}>
                       {new Date(update.at).toLocaleTimeString([], { hourCycle: "h23" })}
                     </td>

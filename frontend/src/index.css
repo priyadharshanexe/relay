@@ -1,52 +1,143 @@
-@import "@fontsource-variable/geist";
-@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/ibm-plex-sans";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
 @import "tailwindcss";
 
 /*
- * Relay's design tokens.
+ * Relay's "dispatch ledger" design.
  *
- * Surfaces are deep charcoal, never pure black, and step up in small increments
- * (canvas -> panel -> raised) so depth comes from tone and hairline borders
- * rather than heavy shadows. Electric blue is the only accent. Green, amber and
- * red mean an operational state (delivered, waiting, failing) and nothing else:
- * they are never used for decoration.
+ * Warm paper and ink, like the dispatch notes and tracking slips of a delivery
+ * service. Signal orange is the one accent (actions, links, focus). Every other
+ * colour has a job: a delivery state, a circuit-breaker state or an HTTP status
+ * class, and nothing else.
+ *
+ * Fonts: Bricolage Grotesque for headings and figures, IBM Plex Sans for text,
+ * IBM Plex Mono only for data (ids, URLs, headers, signatures, status codes).
+ *
+ * Tokens are CSS variables with a light set (the default) and a dark set,
+ * chosen with the theme switch (data-theme on <html>).
  */
 @theme {
-  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+  --font-sans: "IBM Plex Sans Variable", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "IBM Plex Sans Variable", ui-sans-serif, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Code", Menlo, monospace;
 
-  --color-canvas: #0e0f12;
-  --color-panel: #141519;
-  --color-raised: #1a1b20;
-  --color-hover: #202127;
-  --color-line: #24252b;
-  --color-line-strong: #31323a;
-
-  --color-fg: #ededf0;
-  --color-fg-2: #a3a4ad;
-  --color-fg-3: #6c6d77;
-
-  --color-accent: #3b82ff;
-  --color-accent-hover: #5c97ff;
-  --color-accent-soft: rgb(59 130 255 / 0.12);
-  --color-accent-line: rgb(59 130 255 / 0.35);
-
-  --color-ok: #3dd68c;
-  --color-ok-soft: rgb(61 214 140 / 0.1);
-  --color-warn: #f5b84a;
-  --color-warn-soft: rgb(245 184 74 / 0.1);
-  --color-bad: #f26464;
-  --color-bad-soft: rgb(242 100 100 / 0.1);
-
+  /* One type scale: 12 / 13 / 15 / 18 / 24 / 32 / 44. */
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
 
-  --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.06), 0 16px 48px -12px rgb(0 0 0 / 0.7);
+  --color-canvas: var(--paper);
+  --color-panel: var(--card);
+  --color-raised: var(--field);
+  --color-hover: var(--tint);
+  --color-sunken: var(--sunken);
+  --color-line: var(--rule);
+  --color-line-strong: var(--rule-strong);
+
+  --color-fg: var(--ink);
+  --color-fg-2: var(--ink-2);
+  --color-fg-3: var(--ink-3);
+
+  --color-accent: var(--signal);
+  --color-accent-hover: var(--signal-hover);
+  --color-accent-soft: var(--signal-soft);
+  --color-accent-line: var(--signal-line);
+  --color-on-accent: var(--on-signal);
+
+  /* Delivery states, reused with the same meaning for breaker states and HTTP
+     classes: ok = succeeded / closed / 2xx; warn = retrying / half-open / 4xx;
+     bad = dead / open / 5xx; flight = in flight; pending = pending / 3xx. */
+  --color-ok: var(--state-ok);
+  --color-ok-soft: var(--state-ok-soft);
+  --color-warn: var(--state-warn);
+  --color-warn-soft: var(--state-warn-soft);
+  --color-bad: var(--state-bad);
+  --color-bad-soft: var(--state-bad-soft);
+  --color-flight: var(--state-flight);
+  --color-flight-soft: var(--state-flight-soft);
+  --color-pending: var(--state-pending);
+
+  --shadow-pop: var(--elevation);
 
   --animate-flash: flash 1.6s ease-out;
   --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
-  --animate-rise: rise 160ms ease-out;
-  --animate-fade: fade 120ms ease-out;
+  --animate-rise: rise 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  --animate-fade: fade 150ms ease-out;
+  --animate-slide-in: slide-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  --animate-grow: grow 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  --animate-pop: pop 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-reveal: reveal 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Light: the default. */
+:root {
+  color-scheme: light;
+  --paper: #f4f1ea;
+  --card: #ffffff;
+  --field: #fbfaf6;
+  --tint: #efebe2;
+  --sunken: #eae6dc;
+  --rule: #e2dccf;
+  --rule-strong: #cfc8b8;
+  --ink: #1a1915;
+  --ink-2: #57544c;
+  --ink-3: #6f6b62;
+  --signal: #c2410c;
+  --signal-hover: #a3360a;
+  --signal-soft: rgb(194 65 12 / 0.08);
+  --signal-line: rgb(194 65 12 / 0.32);
+  --on-signal: #ffffff;
+  --state-ok: #15803d;
+  --state-ok-soft: rgb(21 128 61 / 0.09);
+  --state-warn: #a16207;
+  --state-warn-soft: rgb(161 98 7 / 0.1);
+  --state-bad: #b91c1c;
+  --state-bad-soft: rgb(185 28 28 / 0.08);
+  --state-flight: #1d4ed8;
+  --state-flight-soft: rgb(29 78 216 / 0.08);
+  --state-pending: #6b6a64;
+  --elevation: 0 1px 2px rgb(26 25 21 / 0.06), 0 14px 36px -10px rgb(26 25 21 / 0.22);
+  --json-key: #1d4ed8;
+  --json-string: #15803d;
+  --json-number: #a3360a;
+  --json-literal: #7c3aed;
+}
+
+/* Dark: the same roles, retuned for a dark page. Chosen with the theme switch;
+   light stays the default whatever the system setting. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #141412;
+  --card: #1c1c19;
+  --field: #22221f;
+  --tint: #2a2a26;
+  --sunken: #0f0f0d;
+  --rule: #2e2d29;
+  --rule-strong: #3d3c36;
+  --ink: #edeae2;
+  --ink-2: #b1ada2;
+  --ink-3: #8f8b81;
+  --signal: #f07b3f;
+  --signal-hover: #f4925e;
+  --signal-soft: rgb(240 123 63 / 0.12);
+  --signal-line: rgb(240 123 63 / 0.4);
+  --on-signal: #1a1208;
+  --state-ok: #5bc48a;
+  --state-ok-soft: rgb(91 196 138 / 0.12);
+  --state-warn: #e3ac4c;
+  --state-warn-soft: rgb(227 172 76 / 0.12);
+  --state-bad: #f07070;
+  --state-bad-soft: rgb(240 112 112 / 0.12);
+  --state-flight: #86a8f6;
+  --state-flight-soft: rgb(134 168 246 / 0.12);
+  --state-pending: #9a968c;
+  --elevation: 0 0 0 1px rgb(255 255 255 / 0.05), 0 18px 44px -12px rgb(0 0 0 / 0.75);
+  --json-key: #9db8ff;
+  --json-string: #9fdcb5;
+  --json-number: #f3b98b;
+  --json-literal: #d6a7ff;
 }
 
 @keyframes flash {
@@ -61,10 +152,10 @@
 @keyframes pulse-dot {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(61 214 140 / 0.45);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-ok) 45%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 5px rgb(61 214 140 / 0);
+    box-shadow: 0 0 0 5px transparent;
   }
 }
 
@@ -77,7 +168,7 @@
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.99);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -85,25 +176,105 @@
   }
 }
 
-:root {
-  /* Native controls (date pickers, scrollbars, select menus) follow the theme. */
-  color-scheme: dark;
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Chart bars grow up from the baseline. */
+@keyframes grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Lines and bars revealed left to right, as if being drawn. */
+@keyframes reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Skeleton placeholders: a soft band passing over. */
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
 }
 
 body {
   @apply bg-canvas font-sans text-fg antialiased;
-  font-feature-settings: "ss01", "cv11";
+  font-size: 15px;
   text-rendering: optimizeLegibility;
 }
 
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
 ::selection {
-  background: rgb(59 130 255 / 0.35);
+  background: var(--color-accent-soft);
+  color: var(--color-fg);
 }
 
 /* One visible focus style everywhere, for keyboard users. */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* JSON inspector syntax colours, per theme. */
+.json-key {
+  color: var(--json-key);
+}
+.json-string {
+  color: var(--json-string);
+}
+.json-number {
+  color: var(--json-number);
+}
+.json-literal {
+  color: var(--json-literal);
+}
+.json-punct {
+  color: var(--color-fg-3);
+}
+
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--color-hover) 25%, var(--color-sunken) 50%, var(--color-hover) 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
 }
 
 /* Quiet scrollbars that don't fight the content. */
@@ -258,23 +429,6 @@ input:-webkit-autofill:focus {
 /* Numbers that line up in columns. */
 .tabular {
   font-variant-numeric: tabular-nums;
-}
-
-/* JSON inspector syntax colours: muted, so the structure reads first. */
-.json-key {
-  color: #9db8ff;
-}
-.json-string {
-  color: #b7e4c7;
-}
-.json-number {
-  color: #f3c98b;
-}
-.json-literal {
-  color: #d6a7ff;
-}
-.json-punct {
-  color: var(--color-fg-3);
 }
 
 @media (prefers-reduced-motion: reduce) {

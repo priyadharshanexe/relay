@@ -1,0 +1,151 @@
+/** The "dispatch ledger" redesign: verdict line, tracker, theme and counters. */
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
+import { labelled, stopsOf } from "./components/Tracker";
+import { CountUp } from "./components/ui";
+import { storedTheme, useTheme } from "./lib/theme";
+import type { DeliveryDetail, Overview } from "./lib/types";
+import { verdict } from "./pages/OverviewPage";
+import { emptyOverview } from "./test/helpers";
+
+function overview(changes: Partial<Overview> & { dead?: number; retrying?: number }): Overview {
+  const { dead = 0, retrying = 0, ...rest } = changes;
+  const base = emptyOverview();
+  return {
+    ...base,
+    attempts: 100,
+    successes: 100,
+    success_rate: 1,
+    deliveries_by_status: { ...base.deliveries_by_status, dead, retrying, succeeded: 100 },
+    ...rest,
+  };
+}
+
+describe("the overview verdict", () => {
+  it("says delivery is normal when everything is accepted", () => {
+    expect(verdict(overview({}))).toEqual({
+      tone: "ok",
+      headline: "Delivering normally",
+      detail: "100% of attempts accepted in the last 24 hours.",
+    });
+  });
+
+  it("calls out retries", () => {
+    const result = verdict(overview({ retrying: 3, successes: 97, success_rate: 0.97 }));
+    expect(result.tone).toBe("warn");
+    expect(result.headline).toBe("Delivering, with retries");
+    expect(result.detail).toBe("97.0% of attempts accepted in the last 24 hours; 3 retrying.");
+  });
+
+  it("says deliveries are failing when there are dead letters", () => {
+    const result = verdict(overview({ dead: 1 }));
+    expect(result.tone).toBe("bad");
+    expect(result.detail).toContain("1 dead letter waiting");
+  });
+
+  it("says deliveries are failing when most attempts fail", () => {
+    expect(verdict(overview({ successes: 50, success_rate: 0.5 })).tone).toBe("bad");
+  });
+
+  it("is idle with no attempts at all", () => {
+    expect(verdict(emptyOverview()).tone).toBe("idle");
+  });
+});
+
+function delivery(changes: Partial<DeliveryDetail>): DeliveryDetail {
+  const created = "2026-03-10T12:00:00Z";
+  return {
+    id: "d1",
+    event_id: "e1",
+    event_type: "order.paid",
+    endpoint_id: "ep1",
+    endpoint_url: "https://hooks.example.com/",
+    status: "retrying",
+    attempts: 2,
+    next_attempt_at: "2026-03-10T12:12:00Z",
+    last_error: null,
+    created_at: created,
+    updated_at: created,
+    payload: {},
+    endpoint_status: "active",
+    endpoint_breaker_state: "closed",
+    attempt_log: [1, 2].map((number) => ({
+      id: `a${number}`,
+      attempt_number: number,
+      started_at: number === 1 ? created : "2026-03-10T12:02:00Z",
+      duration_ms: 20,
+      status_code: 500,
+      error_kind: "http_status" as const,
+      response_snippet: null,
+      request_headers: {},
+      response_headers: null,
+    })),
+    ...changes,
+  };
+}
+
+describe("the delivery tracker", () => {
+  it("has a stop for creation, each attempt, and what comes next", () => {
+    const stops = stopsOf(delivery({}), new Date("2026-03-10T12:05:00Z").getTime());
+    expect(stops.map((stop) => [stop.kind, stop.label, stop.at / 1000])).toEqual([
+      ["created", "Created", 0],
+      ["failed", "#1", 0],
+      ["failed", "#2", 120],
+      ["next", "Next", 720],
+    ]);
+  });
+
+  it("ends at the dead-letter queue when the attempts run out", () => {
+    const stops = stopsOf(delivery({ status: "dead" }));
+    expect(stops.at(-1)).toMatchObject({ kind: "dead", label: "Dead letter" });
+  });
+
+  it("ends at the last attempt once delivered", () => {
+    const stops = stopsOf(delivery({ status: "succeeded" }));
+    expect(stops.at(-1)?.kind).toBe("failed");
+    expect(stops).toHaveLength(3);
+  });
+
+  it("labels only the stops with room, and always the last one", () => {
+    expect(labelled([0, 1, 2, 40, 100])).toEqual([true, false, false, true, true]);
+    // The last stop is too close to the one before: that one gives way.
+    expect(labelled([0, 50, 53])).toEqual([true, false, true]);
+    // ...unless it is the first.
+    expect(labelled([0, 3])).toEqual([true, true]);
+  });
+});
+
+function ThemeProbe() {
+  const [theme, toggle] = useTheme();
+  return (
+    <button type="button" onClick={toggle}>
+      {theme}
+    </button>
+  );
+}
+
+describe("the theme", () => {
+  afterEach(() => {
+    delete document.documentElement.dataset.theme;
+  });
+
+  it("is light by default and switches to dark, remembered for next time", async () => {
+    const user = userEvent.setup();
+    render(<ThemeProbe />);
+    expect(screen.getByRole("button")).toHaveTextContent("light");
+
+    await user.click(screen.getByRole("button"));
+
+    expect(screen.getByRole("button")).toHaveTextContent("dark");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(storedTheme()).toBe("dark");
+  });
+});
+
+describe("counting figures", () => {
+  it("show their final value at once when motion is reduced", () => {
+    render(<CountUp value={1234} />);
+    expect(screen.getByText("1,234")).toBeInTheDocument();
+  });
+});

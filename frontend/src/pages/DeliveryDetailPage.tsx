@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { JsonView } from "../components/JsonView";
+import { Tracker } from "../components/Tracker";
 import { DeliveryStatusBadge, errorKindLabel, readableError } from "../components/delivery";
 import {
   AlertIcon,
@@ -26,7 +27,10 @@ import {
 } from "../components/ui";
 import { ApiError, api } from "../lib/api";
 import { fullDate, milliseconds, timeAgo } from "../lib/format";
+import { gap } from "../lib/time";
 import type { Attempt, Delivery, DeliveryDetail } from "../lib/types";
+
+export { gap } from "../lib/time";
 
 const REPLAYABLE = new Set(["dead", "succeeded"]);
 
@@ -48,18 +52,6 @@ export function holdReason(delivery: DeliveryDetail): string | null {
     );
   }
   return null;
-}
-
-/** 95 -> "1 min 35 s", 7200 -> "2 h". The wait between attempts, i.e. the backoff. */
-export function gap(seconds: number): string {
-  if (seconds < 60) return `${seconds} s`;
-  if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    const rest = seconds % 60;
-    return rest && minutes < 10 ? `${minutes} min ${rest} s` : `${Math.round(seconds / 60)} min`;
-  }
-  const hours = seconds / 3600;
-  return `${hours < 10 ? Math.round(hours * 10) / 10 : Math.round(hours)} h`;
 }
 
 function HeaderList({ title, headers }: { title: string; headers: Record<string, string> | null }) {
@@ -85,7 +77,17 @@ function HeaderList({ title, headers }: { title: string; headers: Record<string,
   );
 }
 
-function AttemptItem({ attempt, previous, last }: { attempt: Attempt; previous?: Attempt; last: boolean }) {
+function AttemptItem({
+  attempt,
+  previous,
+  last,
+  order,
+}: {
+  attempt: Attempt;
+  previous?: Attempt;
+  last: boolean;
+  order: number;
+}) {
   const [open, setOpen] = useState(false);
   const ok = attempt.error_kind === null;
   // The gap since the previous attempt makes the backoff schedule visible.
@@ -96,7 +98,10 @@ function AttemptItem({ attempt, previous, last }: { attempt: Attempt; previous?:
     : null;
 
   return (
-    <li className="relative pl-9">
+    <li
+      className="relative animate-rise pl-9 [animation-fill-mode:both]"
+      style={{ animationDelay: `${Math.min(order, 8) * 70}ms` }}
+    >
       {/* The rail joining this attempt to the next one. */}
       {!last && <span aria-hidden="true" className="absolute bottom-[-1.25rem] left-[11px] top-7 w-px bg-line-strong" />}
       <span
@@ -219,9 +224,12 @@ export function DeliveryDetailPage() {
       state.state.data && !REPLAYABLE.has(state.state.data.status) ? 3_000 : false,
   });
 
+  const [justReplayed, setJustReplayed] = useState(false);
   const replay = useMutation({
     mutationFn: () => api<Delivery>(`/v1/deliveries/${id}/replay`, { method: "POST" }),
     onSuccess: async () => {
+      setJustReplayed(true);
+      setTimeout(() => setJustReplayed(false), 1500);
       await queryClient.invalidateQueries({ queryKey: ["delivery", id] });
       await queryClient.invalidateQueries({ queryKey: ["deliveries"] });
     },
@@ -267,7 +275,7 @@ export function DeliveryDetailPage() {
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-xl font-medium tracking-[-0.02em] text-fg">{delivery.event_type}</h1>
+            <h1 className="font-mono text-2xl font-medium tracking-[-0.02em] text-fg">{delivery.event_type}</h1>
             <DeliveryStatusBadge status={delivery.status} />
           </div>
           <p className="mt-2 flex items-center gap-2 text-[13px] text-fg-3">
@@ -276,12 +284,23 @@ export function DeliveryDetailPage() {
           </p>
         </div>
         {canEdit && (
-          <div className="text-right">
+          <div className="sm:text-right">
             <Button
               variant="primary"
-              icon={<ReplayIcon width={14} height={14} />}
-              busy={replay.isPending}
-              disabled={!replayable}
+              aria-busy={replay.isPending || undefined}
+              icon={
+                justReplayed ? (
+                  <CheckIcon key="done" width={14} height={14} className="animate-pop" />
+                ) : (
+                  <ReplayIcon
+                    key="replay"
+                    width={14}
+                    height={14}
+                    className={replay.isPending ? "animate-spin [animation-direction:reverse]" : undefined}
+                  />
+                )
+              }
+              disabled={!replayable || replay.isPending}
               onClick={() => replay.mutate()}
             >
               Replay
@@ -293,6 +312,8 @@ export function DeliveryDetailPage() {
         )}
       </div>
 
+      {delivery.attempt_log.length > 0 && <Tracker delivery={delivery} />}
+
       <div className="space-y-4 empty:hidden">
         {replay.isError && <ErrorState error={replay.error} />}
         {replay.isSuccess && (
@@ -301,7 +322,7 @@ export function DeliveryDetailPage() {
         {hold && (
           <p
             role="status"
-            className="flex gap-2.5 rounded-lg border border-warn/25 bg-warn-soft px-4 py-3 text-[13px] leading-relaxed text-[#f8d59a]"
+            className="flex animate-rise gap-2.5 rounded-[5px] border-l-[3px] border-l-warn bg-warn-soft px-4 py-3 text-[13px] leading-relaxed text-fg"
           >
             <AlertIcon className="mt-0.5 shrink-0 text-warn" />
             <span>
@@ -335,7 +356,7 @@ export function DeliveryDetailPage() {
         {delivery.last_error && (
           <div className="border-t border-line bg-bad-soft/40 px-5 py-3">
             <p className="text-xs text-fg-3">Last error</p>
-            <p className="mt-1 text-[13px] text-[#ff9b9b]">{readableError(delivery.last_error)}</p>
+            <p className="mt-1 text-[13px] text-bad">{readableError(delivery.last_error)}</p>
           </div>
         )}
       </Card>
@@ -357,6 +378,7 @@ export function DeliveryDetailPage() {
                   attempt={attempt}
                   previous={delivery.attempt_log[index - 1]}
                   last={false}
+                  order={index}
                 />
               ))}
               <NextStep delivery={delivery} />

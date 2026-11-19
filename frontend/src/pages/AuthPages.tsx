@@ -17,57 +17,13 @@ import {
 
 const LINK = "font-medium text-accent transition-colors hover:text-accent-hover";
 
-/** What Relay actually sends: shown beside the sign-in forms, so the first
- *  screen says what the product does by showing it. */
-function SampleRequest() {
-  const header = (name: string, value: string) => (
-    <div>
-      <span className="text-fg-3">{name}:</span> <span className="text-fg-2">{value}</span>
-    </div>
-  );
-  return (
-    <div className="w-full max-w-md">
-      <p className="mb-3 text-xs text-fg-3">What your server receives</p>
-      <div className="overflow-hidden rounded-xl border border-line bg-canvas">
-        <div className="border-b border-line px-4 py-2.5 font-mono text-xs">
-          <span className="text-accent">POST</span> <span className="text-fg">/webhooks/orders</span>
-        </div>
-        <div className="space-y-0.5 px-4 py-3 font-mono text-[11.5px] leading-relaxed">
-          {header("webhook-id", "msg_01JD8Q2H7M")}
-          {header("webhook-timestamp", "1763560800")}
-          {header("webhook-signature", "v1,K5oZfzN95Z9…")}
-          {header("content-type", "application/json")}
-        </div>
-        <div className="border-t border-line px-4 py-3 font-mono text-[11.5px] leading-relaxed">
-          <div className="json-punct">{"{"}</div>
-          <div className="pl-4">
-            <span className="json-key">"type"</span>
-            <span className="json-punct">: </span>
-            <span className="json-string">"order.paid"</span>
-            <span className="json-punct">,</span>
-          </div>
-          <div className="pl-4">
-            <span className="json-key">"order_id"</span>
-            <span className="json-punct">: </span>
-            <span className="json-number">1042</span>
-            <span className="json-punct">,</span>
-          </div>
-          <div className="pl-4">
-            <span className="json-key">"total"</span>
-            <span className="json-punct">: </span>
-            <span className="json-string">"49.00"</span>
-          </div>
-          <div className="json-punct">{"}"}</div>
-        </div>
-      </div>
-      <ul className="mt-6 space-y-2 text-[13px] text-fg-2">
-        <li>Signed, so the receiver can prove it came from you.</li>
-        <li>Retried on a schedule when the receiver is down.</li>
-        <li>Kept, so a failed one can be replayed later.</li>
-      </ul>
-    </div>
-  );
-}
+/** The three promises Relay makes, printed under the sign-in form like the
+ *  tear-off strip of a dispatch slip. */
+const SLIP: [string, string][] = [
+  ["Signed", "Standard Webhooks"],
+  ["Retried", "up to 7 attempts"],
+  ["Kept", "replay any time"],
+];
 
 export function AuthShell({
   title,
@@ -79,22 +35,32 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <div className="flex flex-col px-6 py-8 sm:px-12">
-        <div className="flex items-center gap-2.5">
-          <Logo />
-          <span className="text-[15px] font-semibold tracking-[-0.02em]">Relay</span>
-        </div>
-        <div className="flex flex-1 items-center py-12">
-          <div className="w-full max-w-[360px] animate-rise lg:ml-[max(0px,calc(50%-180px-3rem))]">
-            <h1 className="mb-7 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>
+    <div className="flex min-h-screen flex-col items-center px-5 py-10 sm:py-16">
+      <Link to="/login" className="mb-10 flex items-center gap-2.5 rounded-md">
+        <Logo className="h-7 w-7" />
+        <span className="font-display text-xl font-semibold tracking-[-0.03em]">Relay</span>
+      </Link>
+
+      <div className="w-full max-w-[400px] animate-rise">
+        <div className="rounded-lg border border-line bg-panel shadow-[0_1px_2px_rgb(26_25_21/0.05)]">
+          <div className="px-7 pb-7 pt-6">
+            <h1 className="mb-6 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>
             {children}
-            {footer && <p className="mt-6 text-[13px] text-fg-3">{footer}</p>}
           </div>
+          {/* The tear-off strip: a perforated rule, then the facts in mono. */}
+          <dl
+            aria-label="What Relay does"
+            className="grid grid-cols-3 border-t border-dashed border-line-strong bg-sunken/40 px-4 py-3 font-mono text-2xs"
+          >
+            {SLIP.map(([term, detail]) => (
+              <div key={term} className="px-1.5">
+                <dt className="font-medium text-fg">{term}</dt>
+                <dd className="text-fg-3">{detail}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-      </div>
-      <div aria-hidden="true" className="hidden items-center justify-center border-l border-line bg-panel px-12 lg:flex">
-        <SampleRequest />
+        {footer && <p className="mt-6 text-center text-[13px] text-fg-2">{footer}</p>}
       </div>
     </div>
   );
@@ -171,7 +137,7 @@ export function LoginPage() {
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
         {invite && (
-          <p role="note" className="rounded-lg border border-accent-line bg-accent-soft px-3.5 py-2.5 text-[13px] text-[#a9c7ff]">
+          <p role="note" className="rounded-[5px] border-l-[3px] border-l-accent bg-accent-soft px-3.5 py-2.5 text-[13px] text-fg">
             Log in to accept your invitation.
           </p>
         )}
