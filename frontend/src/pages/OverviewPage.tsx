@@ -96,7 +96,11 @@ function GettingStarted({ hasEndpoint }: { hasEndpoint: boolean }) {
       </div>
       <ol className="divide-y divide-line">
         {steps.map((step, index) => (
-          <li key={step.title} className="flex flex-wrap items-center gap-4 px-6 py-4">
+          // On a phone the link goes on its own line under the text; from sm up it sits at the end of the row.
+          <li
+            key={step.title}
+            className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2 px-6 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+          >
             <span
               aria-hidden="true"
               className={cx(
@@ -114,7 +118,7 @@ function GettingStarted({ hasEndpoint }: { hasEndpoint: boolean }) {
             </div>
             <Link
               to={step.to}
-              className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:text-accent-hover"
+              className="col-start-2 inline-flex items-center gap-1 justify-self-start text-[13px] font-medium text-accent hover:text-accent-hover sm:col-start-auto"
             >
               {step.action}
               <ChevronIcon width={14} height={14} />
