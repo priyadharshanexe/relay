@@ -315,11 +315,11 @@ function EndpointRow({
           )}
           <dl className="flex gap-6 text-right">
             <div>
-              <dt className="text-2xs uppercase tracking-[0.06em] text-fg-3">Success 24h</dt>
+              <dt className="text-xs text-fg-3">Success, 24 h</dt>
               <dd className={`tabular mt-1 text-[15px] font-semibold ${rateTone}`}>{percent(rate)}</dd>
             </div>
             <div>
-              <dt className="text-2xs uppercase tracking-[0.06em] text-fg-3">p95</dt>
+              <dt className="text-xs text-fg-3">p95</dt>
               <dd className="tabular mt-1 text-[15px] font-semibold text-fg">
                 {milliseconds(health?.p95_ms ?? null)}
               </dd>

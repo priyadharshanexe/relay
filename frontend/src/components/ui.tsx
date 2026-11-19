@@ -112,7 +112,7 @@ const CHEVRON =
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select className={cx(INPUT, CHEVRON, "cursor-pointer appearance-none pr-8", className)} {...rest}>
+    <select className={cx(INPUT, CHEVRON, "cursor-pointer appearance-none pr-8 supports-[appearance:base-select]:pr-2.5", className)} {...rest}>
       {children}
     </select>
   );
@@ -294,8 +294,8 @@ export function Card({ children, className }: { children: ReactNode; className?:
 /** Shared table styling: quiet headers, hairline rows, a hover that only hints. */
 export const TABLE = "min-w-full text-[13px]";
 export const THEAD =
-  "border-b border-line text-left text-2xs font-medium uppercase tracking-[0.06em] text-fg-3";
-export const TH = "px-4 py-2.5 font-medium";
+  "border-b border-line text-left text-xs text-fg-3";
+export const TH = "px-4 py-2.5 font-normal";
 export const TBODY = "divide-y divide-line";
 export const TR = "transition-colors hover:bg-raised/60";
 export const TD = "px-4 py-3";
@@ -410,7 +410,7 @@ export function Modal({ title, open, onClose, dismissible = true, children }: Mo
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 px-4 py-[12vh] backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/65 px-4 py-[12vh]"
       onMouseDown={(event) => {
         if (dismissible && event.target === event.currentTarget) onClose();
       }}

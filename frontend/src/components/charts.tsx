@@ -94,7 +94,7 @@ export function AttemptsChart({ buckets }: { buckets: StatsBucket[] }) {
                       <div className="bg-bad" style={{ height: `${(bucket.failed / sum) * 100}%`, minHeight: 2 }} />
                     )}
                     {bucket.succeeded > 0 && (
-                      <div className="flex-1 bg-gradient-to-t from-accent/70 to-accent" />
+                      <div className="flex-1 bg-accent" />
                     )}
                   </div>
                   {active && (
@@ -141,7 +141,7 @@ function HourAxis({ buckets }: { buckets: StatsBucket[] }) {
 }
 
 // ------------------------------------------------------------- latency chart
-/** p95 latency per hour, as a line over a soft area. Idle hours are gaps. */
+/** p95 latency per hour, as a line through each measured hour. Idle hours are gaps. */
 export function LatencyChart({ buckets }: { buckets: StatsBucket[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const values = buckets.map((b) => b.p95_ms);
@@ -191,20 +191,8 @@ export function LatencyChart({ buckets }: { buckets: StatsBucket[] }) {
             preserveAspectRatio="none"
             className="absolute inset-0 h-full w-full overflow-visible"
           >
-            <defs>
-              <linearGradient id="latency-fill" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
-              </linearGradient>
-            </defs>
             {segments.map((points) => (
               <g key={`${points[0]?.x}`}>
-                {points.length > 1 && (
-                  <path
-                    d={`${line(points)} L${points.at(-1)?.x},${height} L${points[0]?.x},${height} Z`}
-                    fill="url(#latency-fill)"
-                  />
-                )}
                 <path
                   d={line(points)}
                   fill="none"

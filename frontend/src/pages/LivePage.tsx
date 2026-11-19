@@ -99,7 +99,7 @@ export function LivePage() {
     <>
       <PageHeader
         title="Live feed"
-        description="Delivery attempts as they happen. Nothing here is stored in your browser: open Deliveries for the full history."
+        description="Attempts as they happen. This view keeps nothing; the full history is under Deliveries."
         action={
           <div className="flex items-center gap-2">
             <span

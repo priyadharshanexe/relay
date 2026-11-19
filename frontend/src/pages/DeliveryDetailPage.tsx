@@ -4,7 +4,15 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { JsonView } from "../components/JsonView";
 import { DeliveryStatusBadge, errorKindLabel, readableError } from "../components/delivery";
-import { AlertIcon, ArrowLeftIcon, ChevronIcon, ClockIcon, ReplayIcon } from "../components/icons";
+import {
+  AlertIcon,
+  ArrowLeftIcon,
+  CheckIcon,
+  ChevronIcon,
+  ClockIcon,
+  CloseIcon,
+  ReplayIcon,
+} from "../components/icons";
 import {
   Badge,
   Button,
@@ -58,7 +66,7 @@ function HeaderList({ title, headers }: { title: string; headers: Record<string,
   const entries = Object.entries(headers ?? {});
   return (
     <div className="min-w-0">
-      <h4 className="mb-2 text-2xs font-medium uppercase tracking-[0.06em] text-fg-3">{title}</h4>
+      <h4 className="mb-2 text-xs text-fg-3">{title}</h4>
       {entries.length === 0 ? (
         <p className="text-xs text-fg-3">None recorded.</p>
       ) : (
@@ -136,7 +144,7 @@ function AttemptItem({ attempt, previous, last }: { attempt: Attempt; previous?:
             <div className="min-w-0 space-y-5">
               <HeaderList title="Response headers" headers={attempt.response_headers} />
               <div>
-                <h4 className="mb-2 text-2xs font-medium uppercase tracking-[0.06em] text-fg-3">
+                <h4 className="mb-2 text-xs text-fg-3">
                   Response body (first part)
                 </h4>
                 <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md border border-line bg-canvas p-3 font-mono text-xs text-fg-2">
@@ -164,7 +172,7 @@ function NextStep({ delivery }: { delivery: DeliveryDetail }) {
             ok ? "border-ok/40 text-ok" : "border-bad/40 text-bad",
           )}
         >
-          {ok ? "✓" : "✕"}
+          {ok ? <CheckIcon width={13} height={13} /> : <CloseIcon width={12} height={12} />}
         </span>
         <p className="pt-0.5 text-[13px] text-fg-2">
           {ok ? "Delivered. Nothing more to do." : "Out of attempts: moved to the dead-letter queue."}
@@ -190,7 +198,7 @@ function NextStep({ delivery }: { delivery: DeliveryDetail }) {
 function Fact({ label, children, mono = false }: { label: string; children: React.ReactNode; mono?: boolean }) {
   return (
     <div className="min-w-0 px-5 py-4">
-      <dt className="text-2xs uppercase tracking-[0.06em] text-fg-3">{label}</dt>
+      <dt className="text-xs text-fg-3">{label}</dt>
       <dd className={cx("mt-1.5 flex min-w-0 items-center gap-1 text-[13px] text-fg", mono && "font-mono text-xs")}>
         {children}
       </dd>
@@ -326,7 +334,7 @@ export function DeliveryDetailPage() {
         </dl>
         {delivery.last_error && (
           <div className="border-t border-line bg-bad-soft/40 px-5 py-3">
-            <p className="text-2xs uppercase tracking-[0.06em] text-fg-3">Last error</p>
+            <p className="text-xs text-fg-3">Last error</p>
             <p className="mt-1 text-[13px] text-[#ff9b9b]">{readableError(delivery.last_error)}</p>
           </div>
         )}

@@ -80,7 +80,7 @@ function OrganizationCard() {
   return (
     <Card className="mb-8 flex flex-wrap items-center justify-between gap-4 px-5 py-4">
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide text-fg-3">Organisation</p>
+        <p className="text-xs text-fg-3">Organisation</p>
         <p className="mt-1 truncate text-base font-semibold text-fg">{organization.name}</p>
       </div>
       {isOwner && <Button onClick={open}>Rename</Button>}
@@ -170,7 +170,7 @@ function MembersCard() {
       {members.data && (
         <Card className="overflow-x-auto">
           <table className="min-w-full text-[13px]">
-            <thead className="border-b border-line text-left text-2xs font-medium uppercase tracking-[0.06em] text-fg-3">
+            <thead className="border-b border-line text-left text-xs text-fg-3">
               <tr>
                 <th scope="col" className="px-5 py-3">Email</th>
                 <th scope="col" className="px-5 py-3">Role</th>
@@ -180,10 +180,10 @@ function MembersCard() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-line text-fg">
+            <tbody className="divide-y divide-line text-fg-2">
               {members.data.map((member) => (
                 <tr key={member.user_id}>
-                  <td className="px-5 py-3 font-medium">
+                  <td className="px-5 py-3 font-medium text-fg">
                     {member.email}
                     {isMe(member) && (
                       <span className="ml-2">
@@ -344,7 +344,7 @@ function InvitationsCard() {
       {invitations.data && invitations.data.length > 0 && (
         <Card className="overflow-x-auto">
           <table className="min-w-full text-[13px]">
-            <thead className="border-b border-line text-left text-2xs font-medium uppercase tracking-[0.06em] text-fg-3">
+            <thead className="border-b border-line text-left text-xs text-fg-3">
               <tr>
                 <th scope="col" className="px-5 py-3">Email</th>
                 <th scope="col" className="px-5 py-3">Role</th>
@@ -354,10 +354,10 @@ function InvitationsCard() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-line text-fg">
+            <tbody className="divide-y divide-line text-fg-2">
               {invitations.data.map((invitation) => (
                 <tr key={invitation.id}>
-                  <td className="px-5 py-3 font-medium">{invitation.email}</td>
+                  <td className="px-5 py-3 font-medium text-fg">{invitation.email}</td>
                   <td className="px-5 py-3">
                     <Badge tone={invitation.role === "viewer" ? "slate" : "blue"}>
                       {invitation.role}

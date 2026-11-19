@@ -104,7 +104,7 @@ export function ApiKeysPage() {
       {keys.data && keys.data.length > 0 && (
         <Card className="overflow-x-auto">
           <table className="min-w-full text-[13px]">
-            <thead className="border-b border-line text-left text-2xs font-medium uppercase tracking-[0.06em] text-fg-3">
+            <thead className="border-b border-line text-left text-xs text-fg-3">
               <tr>
                 <th scope="col" className="px-5 py-3">Name</th>
                 <th scope="col" className="px-5 py-3">Key</th>
@@ -117,8 +117,8 @@ export function ApiKeysPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {keys.data.map((key) => (
-                <tr key={key.id} className={key.revoked_at ? "text-fg-3" : "text-fg"}>
-                  <td className="px-5 py-3 font-medium">{key.name}</td>
+                <tr key={key.id} className={key.revoked_at ? "text-fg-3" : "text-fg-2"}>
+                  <td className={`px-5 py-3 font-medium ${key.revoked_at ? "" : "text-fg"}`}>{key.name}</td>
                   <td className="px-5 py-3 font-mono text-xs">{key.prefix}…</td>
                   <td className="px-5 py-3" title={fullDate(key.last_used_at)}>
                     {timeAgo(key.last_used_at)}

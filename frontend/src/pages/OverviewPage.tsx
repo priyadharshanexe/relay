@@ -135,10 +135,7 @@ export function OverviewPage() {
       title="Overview"
       description="How your webhooks have been doing over the last 24 hours."
       action={
-        <span className="inline-flex h-7 items-center gap-2 rounded-md border border-line px-2.5 text-xs text-fg-2">
-          <span aria-hidden="true" className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-ok" />
-          Last 24 hours · updates every 15 s
-        </span>
+        <span className="text-xs text-fg-3">Last 24 hours, refreshed every 15 seconds</span>
       }
     />
   );

@@ -3,11 +3,13 @@ import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { SecretReveal } from "../components/SecretReveal";
+import { PlusIcon, ReceiverIcon } from "../components/icons";
 import {
   Badge,
   Button,
   Card,
   ConfirmDialog,
+  CopyButton,
   EmptyState,
   ErrorState,
   Field,
@@ -38,6 +40,15 @@ export const MODES: { value: ReceiverMode; label: string; explain: string }[] = 
   { value: "timeout", label: "Never respond", explain: "Holds the connection until Relay gives up." },
 ];
 
+/** What each behaviour means for deliveries: accepted, failing, or held up. */
+const MODE_DOT: Record<ReceiverMode, string> = {
+  ok: "bg-ok",
+  error: "bg-bad",
+  rate_limit: "bg-warn",
+  slow: "bg-warn",
+  timeout: "bg-bad",
+};
+
 function ReceiverRow({
   receiver,
   canEdit,
@@ -50,7 +61,6 @@ function ReceiverRow({
 }) {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const setMode = useMutation({
     mutationFn: (mode: ReceiverMode) =>
@@ -76,100 +86,90 @@ function ReceiverRow({
     },
   });
 
-  async function copyUrl() {
-    try {
-      await navigator.clipboard.writeText(receiver.url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // The URL is selectable as a fallback.
-    }
-  }
-
   const mode = MODES.find((item) => item.value === receiver.mode);
+  const requests =
+    receiver.requests_received === 0
+      ? "No requests received yet"
+      : `${receiver.requests_received} request${receiver.requests_received === 1 ? "" : "s"} received`;
 
   return (
-    <li className="px-5 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-fg">{receiver.name}</p>
-          <div className="mt-1 flex items-center gap-2">
-            <code className="block select-all truncate rounded bg-raised px-2 py-1 font-mono text-xs text-fg">
-              {receiver.url}
-            </code>
-            <Button size="sm" onClick={copyUrl}>
-              {copied ? "Copied" : "Copy URL"}
-            </Button>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            {connected && (
-              <>
-                <Badge tone="green">Endpoint connected</Badge>
-                <Link to="/endpoints" className="text-xs font-medium text-accent hover:underline">
-                  View endpoints
-                </Link>
-              </>
-            )}
-            {connected === false && canEdit && (
-              <Button
-                size="sm"
-                variant="primary"
-                busy={createEndpoint.isPending}
-                onClick={() => createEndpoint.mutate()}
-              >
-                Create endpoint
-              </Button>
-            )}
-            {connected === false && (
-              <span className="text-xs text-fg-3">
+    <li className="grid gap-x-10 gap-y-4 px-5 py-5 md:grid-cols-[minmax(0,1fr)_15rem]">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2.5">
+          <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${MODE_DOT[receiver.mode]}`} />
+          <h3 className="truncate text-sm font-medium text-fg">{receiver.name}</h3>
+        </div>
+        <div className="mt-1.5 flex min-w-0 items-center gap-1 pl-[18px]">
+          <code className="truncate select-all font-mono text-xs text-fg-2">{receiver.url}</code>
+          <CopyButton value={receiver.url} label="Copy URL" />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 pl-[18px] text-xs text-fg-3">
+          <span className="tabular">
+            {requests}
+            {receiver.last_received_at && <> · last {timeAgo(receiver.last_received_at)}</>}
+          </span>
+          {connected && (
+            <span className="flex items-center gap-2">
+              <Badge tone="green">Endpoint connected</Badge>
+              <Link to="/endpoints" className="font-medium text-accent transition-colors hover:text-accent-hover">
+                View endpoints
+              </Link>
+            </span>
+          )}
+          {connected === false && (
+            <span className="flex flex-wrap items-center gap-2.5">
+              {canEdit && (
+                <Button
+                  size="sm"
+                  icon={<PlusIcon width={13} height={13} />}
+                  busy={createEndpoint.isPending}
+                  onClick={() => createEndpoint.mutate()}
+                >
+                  Create endpoint
+                </Button>
+              )}
+              <span>
                 No endpoint delivers here yet{canEdit ? "." : ". Ask an owner or developer to add one."}
               </span>
-            )}
-          </div>
-          {createEndpoint.isError && (
-            <div className="mt-2">
-              <ErrorState error={createEndpoint.error} />
-            </div>
+            </span>
           )}
-          <p className="mt-2 text-xs text-fg-3">
-            {receiver.requests_received === 0
-              ? "No requests received yet"
-              : `${receiver.requests_received} request${
-                  receiver.requests_received === 1 ? "" : "s"
-                } received · last ${timeAgo(receiver.last_received_at)}`}
-          </p>
         </div>
-        <div className="w-56 shrink-0">
-          <Field label="Behaviour" hint={mode?.explain}>
-            {(props) => (
-              <Select
-                {...props}
-                value={receiver.mode}
-                disabled={!canEdit || setMode.isPending}
-                onChange={(event) => setMode.mutate(event.target.value as ReceiverMode)}
-              >
-                {MODES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </Field>
-        </div>
+        {createEndpoint.isError && (
+          <div className="mt-3">
+            <ErrorState error={createEndpoint.error} />
+          </div>
+        )}
+        {setMode.isError && (
+          <div className="mt-3">
+            <ErrorState error={setMode.error} />
+          </div>
+        )}
       </div>
-      {canEdit && (
-        <div className="mt-2">
-          <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>
-            Delete
-          </Button>
-        </div>
-      )}
-      {setMode.isError && (
-        <div className="mt-3">
-          <ErrorState error={setMode.error} />
-        </div>
-      )}
+      <div>
+        <Field label="Behaviour" hint={mode?.explain}>
+          {(props) => (
+            <Select
+              {...props}
+              value={receiver.mode}
+              disabled={!canEdit || setMode.isPending}
+              onChange={(event) => setMode.mutate(event.target.value as ReceiverMode)}
+            >
+              {MODES.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        {canEdit && (
+          <div className="mt-3 flex justify-end">
+            <Button size="sm" variant="ghost" className="hover:text-bad" onClick={() => setConfirmDelete(true)}>
+              Delete
+            </Button>
+          </div>
+        )}
+      </div>
       <ConfirmDialog
         open={confirmDelete}
         title="Delete this test receiver?"
@@ -263,7 +263,7 @@ export function ReceiversPage() {
     <>
       <PageHeader
         title="Test receivers"
-        description="Stand-in servers hosted by Relay. Point an endpoint at one, then make it fail, slow down or recover to see how Relay reacts."
+        description="Fake customer servers, hosted by Relay. Make one fail, slow down or recover, and watch how deliveries respond."
         action={addButton}
       />
 
@@ -272,7 +272,7 @@ export function ReceiversPage() {
         <ErrorState error={receivers.error} onRetry={() => void receivers.refetch()} />
       )}
       {receivers.data?.length === 0 && (
-        <EmptyState title="No test receivers yet" action={addButton}>
+        <EmptyState title="No test receivers yet" action={addButton} icon={<ReceiverIcon />}>
           A test receiver gives you a URL that accepts webhooks, so you can try Relay without
           running a server of your own.
         </EmptyState>

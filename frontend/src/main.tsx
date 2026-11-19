@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
+import { TooltipLayer } from "./components/TooltipLayer";
 import { ApiError } from "./lib/api";
 import "./index.css";
 
@@ -22,6 +23,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <App />
+        <TooltipLayer />
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

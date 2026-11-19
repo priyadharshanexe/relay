@@ -46,6 +46,7 @@
   --animate-flash: flash 1.6s ease-out;
   --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
   --animate-rise: rise 160ms ease-out;
+  --animate-fade: fade 120ms ease-out;
 }
 
 @keyframes flash {
@@ -64,6 +65,12 @@
   }
   50% {
     box-shadow: 0 0 0 5px rgb(61 214 140 / 0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
   }
 }
 
@@ -103,6 +110,149 @@ body {
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line-strong) transparent;
+}
+
+/*
+ * Native controls, designed rather than left to the browser.
+ *
+ * Dropdowns use the browser's customizable select (appearance: base-select):
+ * still a real <select>, so keyboard use, screen readers and form behaviour are
+ * the browser's own, but the open list is ours. Browsers without it fall back
+ * to a dark native list.
+ */
+option {
+  background-color: var(--color-raised);
+  color: var(--color-fg);
+}
+
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select {
+    display: flex;
+    align-items: center;
+    /* The arrow below replaces the drawn chevron used without base-select. */
+    background-image: none;
+  }
+
+  select::picker-icon {
+    content: "";
+    width: 16px;
+    height: 16px;
+    margin-inline-start: auto;
+    background-color: var(--color-fg-3);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    transition: rotate 150ms ease-out;
+  }
+
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+
+  /* A select laid over a custom face (the organisation switcher) draws nothing itself. */
+  select[data-overlay]::picker-icon {
+    display: none;
+  }
+
+  ::picker(select) {
+    margin-block: 6px;
+    padding: 4px;
+    min-width: anchor-size(width);
+    max-height: min(320px, 50vh);
+    overflow-y: auto;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 10px;
+    background: var(--color-raised);
+    color: var(--color-fg);
+    box-shadow: var(--shadow-pop);
+    font-size: 13px;
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity 120ms ease-out,
+      translate 120ms ease-out,
+      display 120ms allow-discrete,
+      overlay 120ms allow-discrete;
+  }
+
+  @starting-style {
+    ::picker(select):popover-open {
+      opacity: 0;
+      translate: 0 -4px;
+    }
+  }
+
+  option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-fg-2);
+    cursor: pointer;
+    outline: none;
+    transition: background-color 80ms;
+  }
+
+  option:hover,
+  option:focus-visible {
+    background: var(--color-hover);
+    color: var(--color-fg);
+    /* The highlight already marks the active option; no ring on top. */
+    outline: none;
+  }
+
+  option:checked {
+    color: var(--color-fg);
+  }
+
+  option::checkmark {
+    order: 1;
+    margin-inline-start: auto;
+    color: var(--color-accent);
+  }
+}
+
+/* Date fields: a quiet calendar button instead of the bright default. */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 0.45;
+  cursor: pointer;
+  transition: opacity 100ms;
+}
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.9;
+}
+input[type="datetime-local"]::-webkit-datetime-edit {
+  color: var(--color-fg);
+}
+input[type="datetime-local"]:invalid::-webkit-datetime-edit,
+input[type="datetime-local"]:not(:focus)[value=""]::-webkit-datetime-edit {
+  color: var(--color-fg-3);
+}
+
+/* Number fields: no spinner arrows; people type the number. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  appearance: textfield;
+}
+
+/* Saved logins: Chrome paints autofilled fields pale blue or yellow. Keep ours. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-fg);
+  caret-color: var(--color-fg);
+  box-shadow: 0 0 0 1000px var(--color-raised) inset;
+  transition: background-color 9999s ease-out;
 }
 
 /* Numbers that line up in columns. */

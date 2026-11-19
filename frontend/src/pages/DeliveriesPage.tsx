@@ -311,7 +311,7 @@ export function DeadLetterPage() {
     <>
       <PageHeader
         title="Dead-letter queue"
-        description="Deliveries that failed every attempt. Once the receiving server is fixed, replay them and Relay sends them again with a fresh retry schedule."
+        description="Deliveries that ran out of attempts. Fix the receiving server, then replay them with a fresh retry schedule."
         action={
           canEdit && (
             <Button variant="primary" icon={<ReplayIcon width={14} height={14} />} onClick={() => setConfirming(true)}>
