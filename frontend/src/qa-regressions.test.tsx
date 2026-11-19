@@ -124,7 +124,7 @@ describe("login and sign-up check the form before sending it", () => {
 
     await user.type(screen.getByLabelText("Organisation name"), "Acme  ");
     await user.click(screen.getByRole("button", { name: "Create account" }));
-    await screen.findByRole("heading", { name: "Endpoints" });
+    await screen.findByRole("heading", { name: "Overview" });
     const sent = calls.find((call) => call.path === "/v1/auth/register");
     expect(sent?.body).toMatchObject({ organization_name: "Acme" });
   });

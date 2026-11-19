@@ -80,8 +80,8 @@ function OrganizationCard() {
   return (
     <Card className="mb-8 flex flex-wrap items-center justify-between gap-4 px-5 py-4">
       <div className="min-w-0">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Organisation</p>
-        <p className="mt-1 truncate text-base font-semibold text-slate-900">{organization.name}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-fg-3">Organisation</p>
+        <p className="mt-1 truncate text-base font-semibold text-fg">{organization.name}</p>
       </div>
       {isOwner && <Button onClick={open}>Rename</Button>}
 
@@ -157,7 +157,7 @@ function MembersCard() {
 
   return (
     <section aria-labelledby="members-heading" className="mb-8">
-      <h2 id="members-heading" className="mb-3 text-sm font-semibold text-slate-900">
+      <h2 id="members-heading" className="mb-3 text-sm font-semibold text-fg">
         Members
       </h2>
       {members.isPending && <LoadingState label="Loading members…" />}
@@ -169,8 +169,8 @@ function MembersCard() {
       )}
       {members.data && (
         <Card className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <table className="min-w-full text-[13px]">
+            <thead className="border-b border-line text-left text-2xs font-medium uppercase tracking-[0.06em] text-fg-3">
               <tr>
                 <th scope="col" className="px-5 py-3">Email</th>
                 <th scope="col" className="px-5 py-3">Role</th>
@@ -180,7 +180,7 @@ function MembersCard() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 text-slate-700">
+            <tbody className="divide-y divide-line text-fg">
               {members.data.map((member) => (
                 <tr key={member.user_id}>
                   <td className="px-5 py-3 font-medium">
@@ -228,10 +228,10 @@ function MembersCard() {
           </table>
         </Card>
       )}
-      <dl className="mt-3 space-y-1 text-xs text-slate-500">
+      <dl className="mt-3 space-y-1 text-xs text-fg-3">
         {ROLES.map((role) => (
           <div key={role.value} className="flex gap-1">
-            <dt className="font-medium text-slate-600">{role.label}:</dt>
+            <dt className="font-medium text-fg-2">{role.label}:</dt>
             <dd>{role.explain}</dd>
           </div>
         ))}
@@ -324,7 +324,7 @@ function InvitationsCard() {
   return (
     <section aria-labelledby="invitations-heading">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 id="invitations-heading" className="text-sm font-semibold text-slate-900">
+        <h2 id="invitations-heading" className="text-sm font-semibold text-fg">
           Pending invitations
         </h2>
         <Button variant="primary" onClick={open}>
@@ -337,14 +337,14 @@ function InvitationsCard() {
         <ErrorState error={invitations.error} onRetry={() => void invitations.refetch()} />
       )}
       {invitations.data?.length === 0 && (
-        <Card className="px-5 py-6 text-sm text-slate-500">
+        <Card className="px-5 py-6 text-sm text-fg-3">
           Nobody is waiting to join. Invite someone to get a link you can send them.
         </Card>
       )}
       {invitations.data && invitations.data.length > 0 && (
         <Card className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <table className="min-w-full text-[13px]">
+            <thead className="border-b border-line text-left text-2xs font-medium uppercase tracking-[0.06em] text-fg-3">
               <tr>
                 <th scope="col" className="px-5 py-3">Email</th>
                 <th scope="col" className="px-5 py-3">Role</th>
@@ -354,7 +354,7 @@ function InvitationsCard() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 text-slate-700">
+            <tbody className="divide-y divide-line text-fg">
               {invitations.data.map((invitation) => (
                 <tr key={invitation.id}>
                   <td className="px-5 py-3 font-medium">{invitation.email}</td>
@@ -432,7 +432,7 @@ function InvitationsCard() {
               label={`Invitation link for ${created.email}`}
               secret={invitationLink(created.token)}
             />
-            <p className="mt-4 text-sm text-slate-600">
+            <p className="mt-4 text-sm text-fg-2">
               Relay does not send email. Send this link to {created.email} yourself. It works once,
               only for that address, until {fullDate(created.expires_at)}.
             </p>

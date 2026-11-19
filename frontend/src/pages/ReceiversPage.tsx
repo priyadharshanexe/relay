@@ -92,9 +92,9 @@ function ReceiverRow({
     <li className="px-5 py-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-slate-900">{receiver.name}</p>
+          <p className="text-sm font-medium text-fg">{receiver.name}</p>
           <div className="mt-1 flex items-center gap-2">
-            <code className="block select-all truncate rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-700">
+            <code className="block select-all truncate rounded bg-raised px-2 py-1 font-mono text-xs text-fg">
               {receiver.url}
             </code>
             <Button size="sm" onClick={copyUrl}>
@@ -105,7 +105,7 @@ function ReceiverRow({
             {connected && (
               <>
                 <Badge tone="green">Endpoint connected</Badge>
-                <Link to="/endpoints" className="text-xs font-medium text-brand-700 hover:underline">
+                <Link to="/endpoints" className="text-xs font-medium text-accent hover:underline">
                   View endpoints
                 </Link>
               </>
@@ -121,7 +121,7 @@ function ReceiverRow({
               </Button>
             )}
             {connected === false && (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-fg-3">
                 No endpoint delivers here yet{canEdit ? "." : ". Ask an owner or developer to add one."}
               </span>
             )}
@@ -131,7 +131,7 @@ function ReceiverRow({
               <ErrorState error={createEndpoint.error} />
             </div>
           )}
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-fg-3">
             {receiver.requests_received === 0
               ? "No requests received yet"
               : `${receiver.requests_received} request${
@@ -190,12 +190,12 @@ function ReceiverRow({
       >
         {secret && (
           <>
-            <p className="mb-3 text-sm text-slate-600">
+            <p className="mb-3 text-sm text-fg-2">
               Events now go to <strong>{receiver.name}</strong>. Open Endpoints and use "Send test
               event" to try it.
             </p>
             <SecretReveal label="Signing secret for the new endpoint" secret={secret} />
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-3 text-sm text-fg-2">
               The test receiver does not need it. Keep it only if you want to check signatures
               yourself.
             </p>
@@ -279,7 +279,7 @@ export function ReceiversPage() {
       )}
       {receivers.data && receivers.data.length > 0 && (
         <Card>
-          <ul className="divide-y divide-slate-200">
+          <ul className="divide-y divide-line">
             {receivers.data.map((receiver) => (
               <ReceiverRow
                 key={receiver.id}

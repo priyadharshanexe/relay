@@ -103,8 +103,8 @@ export function ApiKeysPage() {
       )}
       {keys.data && keys.data.length > 0 && (
         <Card className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+          <table className="min-w-full text-[13px]">
+            <thead className="border-b border-line text-left text-2xs font-medium uppercase tracking-[0.06em] text-fg-3">
               <tr>
                 <th scope="col" className="px-5 py-3">Name</th>
                 <th scope="col" className="px-5 py-3">Key</th>
@@ -115,9 +115,9 @@ export function ApiKeysPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-line">
               {keys.data.map((key) => (
-                <tr key={key.id} className={key.revoked_at ? "text-slate-400" : "text-slate-700"}>
+                <tr key={key.id} className={key.revoked_at ? "text-fg-3" : "text-fg"}>
                   <td className="px-5 py-3 font-medium">{key.name}</td>
                   <td className="px-5 py-3 font-mono text-xs">{key.prefix}…</td>
                   <td className="px-5 py-3" title={fullDate(key.last_used_at)}>
@@ -176,13 +176,13 @@ export function ApiKeysPage() {
           <>
             <SecretReveal label={`API key "${created.name}"`} secret={created.key} />
             <div className="mt-4">
-              <p className="text-sm font-medium text-slate-900">Send your first event</p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-sm font-medium text-fg">Send your first event</p>
+              <p className="mt-1 text-xs text-fg-3">
                 Run this from your backend or a terminal. The key goes in the Authorization header.
               </p>
               <pre
                 data-testid="usage-example"
-                className="mt-2 overflow-x-auto rounded-md bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-100"
+                className="mt-2 overflow-x-auto rounded-lg border border-line bg-canvas p-3.5 font-mono text-xs leading-relaxed text-fg-2"
               >
                 {usageExample(created.key)}
               </pre>

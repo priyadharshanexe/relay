@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SESSION_QUERY_KEY } from "../auth/AuthProvider";
+import { Logo } from "../components/icons";
 import { Button, ErrorState, Field, Input, LoadingState } from "../components/ui";
 import { api, fieldErrors, setCurrentOrgId } from "../lib/api";
 import type { InvitationInfo, Session } from "../lib/types";
@@ -14,7 +15,7 @@ import {
   requiredText,
 } from "../lib/validate";
 
-const LINK = "font-medium text-brand-600 hover:text-brand-700";
+const LINK = "font-medium text-accent transition-colors hover:text-accent-hover";
 
 export function AuthShell({
   title,
@@ -26,22 +27,27 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <span
-            aria-hidden="true"
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-600 font-bold text-white"
-          >
-            R
-          </span>
-          <span className="text-lg font-semibold text-slate-900">Relay</span>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12">
+      {/* A soft glow of the accent behind the card, and a faint grid: depth
+          without decoration that competes with the form. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_50%_0%,rgb(59_130_255/0.16),transparent_70%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.35] [background-image:linear-gradient(var(--color-line)_1px,transparent_1px),linear-gradient(90deg,var(--color-line)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_30%,black,transparent)]"
+      />
+      <div className="relative w-full max-w-[380px] animate-rise">
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <Logo className="h-9 w-9" />
+          <p className="text-[13px] text-fg-3">Reliable, signed webhook delivery</p>
         </div>
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h1 className="mb-5 text-lg font-semibold text-slate-900">{title}</h1>
+        <div className="rounded-xl border border-line-strong bg-panel/90 p-7 shadow-pop backdrop-blur">
+          <h1 className="mb-6 text-lg font-semibold tracking-[-0.02em] text-fg">{title}</h1>
           {children}
         </div>
-        {footer && <p className="mt-4 text-center text-sm text-slate-600">{footer}</p>}
+        {footer && <p className="mt-6 text-center text-[13px] text-fg-3">{footer}</p>}
       </div>
     </div>
   );
@@ -118,7 +124,7 @@ export function LoginPage() {
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
         {invite && (
-          <p role="note" className="rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-700">
+          <p role="note" className="rounded-lg border border-accent-line bg-accent-soft px-3.5 py-2.5 text-[13px] text-[#a9c7ff]">
             Log in to accept your invitation.
           </p>
         )}
@@ -186,7 +192,7 @@ export function RegisterPage() {
     return (
       <AuthShell title="Create your account" footer={footer}>
         <ErrorState error={invitation.error} />
-        <p className="mt-4 text-sm text-slate-600">
+        <p className="mt-4 text-sm text-fg-2">
           Ask the person who invited you for a new link, or{" "}
           <Link to="/register" className={LINK}>
             create your own organisation
@@ -226,7 +232,7 @@ export function RegisterPage() {
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
         {invited ? (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-fg-2">
             You were invited as a <strong>{invited.role}</strong>. Choose a password to create your
             account.
           </p>
@@ -253,7 +259,6 @@ export function RegisterPage() {
               type="email"
               autoComplete="email"
               readOnly={invited !== undefined}
-              className={invited ? "bg-slate-50 text-slate-600" : undefined}
               value={invited ? invited.email : email}
               onChange={(event) => setEmail(event.target.value)}
             />

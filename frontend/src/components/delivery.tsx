@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { fullDate, timeAgo } from "../lib/format";
 import type { Delivery, DeliveryStatus, Endpoint, ErrorKind } from "../lib/types";
-import { Badge, Card } from "./ui";
+import { Badge, Card, cx, TABLE, TBODY, TD, TH, THEAD, TR } from "./ui";
 
 const STATUS: Record<DeliveryStatus, { label: string; tone: "green" | "red" | "amber" | "slate" | "blue" }> = {
   pending: { label: "Pending", tone: "slate" },
@@ -58,43 +58,40 @@ export function useEndpoints() {
 export function DeliveryTable({ deliveries }: { deliveries: Delivery[] }) {
   return (
     <Card className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
-        <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
+      <table className={TABLE}>
+        <thead className={THEAD}>
           <tr>
-            <th scope="col" className="px-4 py-3">Status</th>
-            <th scope="col" className="px-4 py-3">Event</th>
-            <th scope="col" className="px-4 py-3">Endpoint</th>
-            <th scope="col" className="px-4 py-3">Attempts</th>
-            <th scope="col" className="px-4 py-3">Created</th>
+            <th scope="col" className={cx(TH, "w-32")}>Status</th>
+            <th scope="col" className={TH}>Event</th>
+            <th scope="col" className={TH}>Endpoint</th>
+            <th scope="col" className={cx(TH, "text-right")}>Attempts</th>
+            <th scope="col" className={cx(TH, "text-right")}>Created</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-200">
+        <tbody className={TBODY}>
           {deliveries.map((delivery) => (
-            <tr key={delivery.id} className="hover:bg-slate-50">
-              <td className="whitespace-nowrap px-4 py-3">
+            <tr key={delivery.id} className={cx(TR, "group relative")}>
+              <td className={cx(TD, "whitespace-nowrap")}>
                 <DeliveryStatusBadge status={delivery.status} />
               </td>
-              <td className="px-4 py-3">
+              <td className={cx(TD, "max-w-sm")}>
                 <Link
                   to={`/deliveries/${delivery.id}`}
-                  className="font-mono text-xs font-medium text-brand-700 hover:underline"
+                  className="font-mono text-xs font-medium text-fg transition-colors after:absolute after:inset-0 group-hover:text-accent"
                 >
                   {delivery.event_type}
                 </Link>
                 {delivery.last_error && (
-                  <p
-                    className="mt-0.5 max-w-xs truncate text-xs text-red-700"
-                    title={readableError(delivery.last_error)}
-                  >
+                  <p className="mt-1 truncate text-xs text-bad/90" title={readableError(delivery.last_error)}>
                     {readableError(delivery.last_error)}
                   </p>
                 )}
               </td>
-              <td className="max-w-xs truncate px-4 py-3 font-mono text-xs text-slate-600" title={delivery.endpoint_url}>
+              <td className={cx(TD, "max-w-xs truncate font-mono text-xs text-fg-3")} title={delivery.endpoint_url}>
                 {delivery.endpoint_url}
               </td>
-              <td className="px-4 py-3 text-slate-700">{delivery.attempts}</td>
-              <td className="whitespace-nowrap px-4 py-3 text-slate-600" title={fullDate(delivery.created_at)}>
+              <td className={cx(TD, "tabular text-right text-fg-2")}>{delivery.attempts}</td>
+              <td className={cx(TD, "tabular whitespace-nowrap text-right text-fg-3")} title={fullDate(delivery.created_at)}>
                 {timeAgo(delivery.created_at)}
               </td>
             </tr>

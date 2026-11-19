@@ -4,7 +4,7 @@ import type { ReactElement } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { AuthProvider } from "../auth/AuthProvider";
-import type { Role, Session } from "../lib/types";
+import type { Overview, Role, Session } from "../lib/types";
 
 export function sessionAs(role: Role = "owner"): Session {
   return {
@@ -72,3 +72,32 @@ export function jsonResponse(status: number, body: unknown): Response {
     headers: { "Content-Type": "application/json", "X-Request-ID": "req-test-1" },
   });
 }
+
+/** The overview's answer for an organisation with no activity yet. */
+export function emptyOverview(): Overview {
+  const hour = 3_600_000;
+  const start = Math.floor(Date.now() / hour) * hour - 23 * hour;
+  return {
+    since: new Date(start).toISOString(),
+    buckets: Array.from({ length: 24 }, (_, index) => ({
+      start: new Date(start + index * hour).toISOString(),
+      succeeded: 0,
+      failed: 0,
+      p95_ms: null,
+    })),
+    endpoints: [],
+    deliveries_by_status: { pending: 0, in_flight: 0, retrying: 0, succeeded: 0, dead: 0 },
+    events: 0,
+    attempts: 0,
+    successes: 0,
+    success_rate: null,
+    p95_ms: null,
+  };
+}
+
+/** What the dashboard loads when it first opens, with nothing in it yet. */
+export const EMPTY_DASHBOARD = {
+  "GET /v1/endpoints": { body: [] },
+  "GET /v1/endpoints/health": { body: [] },
+  "GET /v1/stats/overview": () => ({ body: emptyOverview() }),
+};

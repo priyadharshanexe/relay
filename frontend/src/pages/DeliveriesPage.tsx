@@ -11,9 +11,11 @@ import {
   Field,
   Input,
   LoadingState,
+  Notice,
   PageHeader,
   Select,
 } from "../components/ui";
+import { DeadLetterIcon, DeliveriesIcon, ReplayIcon } from "../components/icons";
 import { api } from "../lib/api";
 import type { Delivery, Page } from "../lib/types";
 
@@ -139,7 +141,7 @@ function FilterBar({
 }) {
   const endpoints = useEndpoints();
   return (
-    <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="mb-5 grid gap-3 rounded-xl border border-line bg-panel p-3.5 sm:grid-cols-2 lg:grid-cols-5">
       {showStatus && (
         <Field label="Status">
           {(props) => (
@@ -214,12 +216,14 @@ function DeliveryList({
   onClear,
   emptyTitle,
   emptyText,
+  emptyIcon,
 }: {
   filters: Filters;
   active: boolean;
   onClear: () => void;
   emptyTitle: string;
   emptyText: string;
+  emptyIcon?: React.ReactNode;
 }) {
   const query = useDeliveries(filters);
   const deliveries = query.data?.pages.flatMap((page) => page.items) ?? [];
@@ -232,13 +236,15 @@ function DeliveryList({
         Try a wider time range or a different status.
       </EmptyState>
     ) : (
-      <EmptyState title={emptyTitle}>{emptyText}</EmptyState>
+      <EmptyState title={emptyTitle} icon={emptyIcon}>
+        {emptyText}
+      </EmptyState>
     );
   }
   return (
     <>
       <DeliveryTable deliveries={deliveries} />
-      <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+      <div className="mt-4 flex items-center justify-between text-xs text-fg-3">
         <span>
           Showing {deliveries.length} deliver{deliveries.length === 1 ? "y" : "ies"}
         </span>
@@ -268,6 +274,7 @@ export function DeliveriesPage() {
         onClear={clear}
         emptyTitle="No deliveries yet"
         emptyText="Deliveries appear here as soon as you send an event that an endpoint subscribes to."
+        emptyIcon={<DeliveriesIcon />}
       />
     </>
   );
@@ -307,18 +314,20 @@ export function DeadLetterPage() {
         description="Deliveries that failed every attempt. Once the receiving server is fixed, replay them and Relay sends them again with a fresh retry schedule."
         action={
           canEdit && (
-            <Button variant="primary" onClick={() => setConfirming(true)}>
+            <Button variant="primary" icon={<ReplayIcon width={14} height={14} />} onClick={() => setConfirming(true)}>
               {active ? "Replay matching" : "Replay all"}
             </Button>
           )
         }
       />
       {replayed !== null && (
-        <p role="status" className="mb-4 rounded-md bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-          {replayed === 0
-            ? "Nothing to replay."
-            : `${replayed} deliver${replayed === 1 ? "y" : "ies"} queued for replay.`}
-        </p>
+        <div className="mb-5">
+          <Notice tone={replayed === 0 ? "info" : "ok"}>
+            {replayed === 0
+              ? "Nothing to replay."
+              : `${replayed} deliver${replayed === 1 ? "y" : "ies"} queued for replay.`}
+          </Notice>
+        </div>
       )}
       <FilterBar filters={filters} setFilter={setFilter} showStatus={false} />
       <DeliveryList
@@ -327,6 +336,7 @@ export function DeadLetterPage() {
         onClear={clear}
         emptyTitle="The dead-letter queue is empty"
         emptyText="Good news: no delivery has run out of attempts."
+        emptyIcon={<DeadLetterIcon />}
       />
       <ConfirmDialog
         open={confirming}

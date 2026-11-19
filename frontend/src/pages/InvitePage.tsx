@@ -7,7 +7,7 @@ import { fullDate } from "../lib/format";
 import type { Organization, Session } from "../lib/types";
 import { AuthShell, useInvitation } from "./AuthPages";
 
-const LINK = "font-medium text-brand-600 hover:text-brand-700";
+const LINK = "font-medium text-accent hover:text-accent-hover";
 
 /**
  * Where an invitation link leads.
@@ -45,7 +45,7 @@ export function InvitePage({ session }: { session: Session | null }) {
     return (
       <AuthShell title="Invitation">
         <ErrorState error={invitation.error} />
-        <p className="mt-4 text-sm text-slate-600">
+        <p className="mt-4 text-sm text-fg-2">
           Invitation links work once and expire. Ask the person who invited you for a new one.
         </p>
         <p className="mt-4 text-sm">
@@ -60,7 +60,7 @@ export function InvitePage({ session }: { session: Session | null }) {
   const { organization_name, email, role, expires_at } = invitation.data;
   const query = `?invite=${encodeURIComponent(token)}`;
   const summary = (
-    <p className="text-sm text-slate-600">
+    <p className="text-sm text-fg-2">
       <strong>{email}</strong> was invited to join <strong>{organization_name}</strong> as a{" "}
       <strong>{role}</strong>. The invitation is valid until {fullDate(expires_at)}.
     </p>
@@ -73,13 +73,13 @@ export function InvitePage({ session }: { session: Session | null }) {
         <div className="mt-5 space-y-3">
           <Link
             to={`/register${query}`}
-            className="block w-full rounded-md bg-brand-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-brand-700"
+            className="block w-full rounded-md bg-accent px-3 py-2 text-center text-sm font-medium text-white hover:bg-accent-hover"
           >
             Create an account
           </Link>
           <Link
             to={`/login${query}`}
-            className="block w-full rounded-md bg-white px-3 py-2 text-center text-sm font-medium text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
+            className="block w-full rounded-md bg-panel px-3 py-2 text-center text-sm font-medium text-fg ring-1 ring-inset ring-line-strong hover:bg-hover"
           >
             I already have an account
           </Link>
@@ -92,7 +92,7 @@ export function InvitePage({ session }: { session: Session | null }) {
     return (
       <AuthShell title={`Join ${organization_name}`}>
         {summary}
-        <p role="alert" className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p role="alert" className="mt-4 rounded-lg border border-warn/25 bg-warn-soft px-3.5 py-2.5 text-[13px] text-[#f8d59a]">
           You are logged in as <strong>{session.user.email}</strong>. Log out, then open this link
           again as {email}.
         </p>

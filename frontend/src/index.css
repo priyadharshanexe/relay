@@ -1,21 +1,137 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 @import "tailwindcss";
 
+/*
+ * Relay's design tokens.
+ *
+ * Surfaces are deep charcoal, never pure black, and step up in small increments
+ * (canvas -> panel -> raised) so depth comes from tone and hairline borders
+ * rather than heavy shadows. Electric blue is the only accent. Green, amber and
+ * red mean an operational state (delivered, waiting, failing) and nothing else:
+ * they are never used for decoration.
+ */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
-  --color-brand-50: #eef4ff;
-  --color-brand-100: #d9e6ff;
-  --color-brand-500: #3b6cf6;
-  --color-brand-600: #2854d8;
-  --color-brand-700: #1f43ad;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+
+  --color-canvas: #0e0f12;
+  --color-panel: #141519;
+  --color-raised: #1a1b20;
+  --color-hover: #202127;
+  --color-line: #24252b;
+  --color-line-strong: #31323a;
+
+  --color-fg: #ededf0;
+  --color-fg-2: #a3a4ad;
+  --color-fg-3: #6c6d77;
+
+  --color-accent: #3b82ff;
+  --color-accent-hover: #5c97ff;
+  --color-accent-soft: rgb(59 130 255 / 0.12);
+  --color-accent-line: rgb(59 130 255 / 0.35);
+
+  --color-ok: #3dd68c;
+  --color-ok-soft: rgb(61 214 140 / 0.1);
+  --color-warn: #f5b84a;
+  --color-warn-soft: rgb(245 184 74 / 0.1);
+  --color-bad: #f26464;
+  --color-bad-soft: rgb(242 100 100 / 0.1);
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --shadow-pop: 0 0 0 1px rgb(255 255 255 / 0.06), 0 16px 48px -12px rgb(0 0 0 / 0.7);
+
+  --animate-flash: flash 1.6s ease-out;
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+  --animate-rise: rise 160ms ease-out;
+}
+
+@keyframes flash {
+  from {
+    background-color: var(--color-accent-soft);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(61 214 140 / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgb(61 214 140 / 0);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+:root {
+  /* Native controls (date pickers, scrollbars, select menus) follow the theme. */
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-canvas font-sans text-fg antialiased;
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(59 130 255 / 0.35);
 }
 
 /* One visible focus style everywhere, for keyboard users. */
 :focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Quiet scrollbars that don't fight the content. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+/* Numbers that line up in columns. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* JSON inspector syntax colours: muted, so the structure reads first. */
+.json-key {
+  color: #9db8ff;
+}
+.json-string {
+  color: #b7e4c7;
+}
+.json-number {
+  color: #f3c98b;
+}
+.json-literal {
+  color: #d6a7ff;
+}
+.json-punct {
+  color: var(--color-fg-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -2,19 +2,30 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { SecretReveal } from "../components/SecretReveal";
+import { Sparkline } from "../components/charts";
+import {
+  EndpointsIcon,
+  PauseIcon,
+  PlayIcon,
+  PlusIcon,
+  SendIcon,
+} from "../components/icons";
 import {
   Badge,
   Button,
   Card,
   ConfirmDialog,
+  CopyButton,
   EmptyState,
   ErrorState,
   Field,
   Input,
   LoadingState,
   Modal,
+  Notice,
   PageHeader,
 } from "../components/ui";
+import { useOverview } from "./OverviewPage";
 import { ApiError, api, fieldErrors } from "../lib/api";
 import { milliseconds, percent, timeAgo } from "../lib/format";
 import {
@@ -29,6 +40,7 @@ import type {
   Endpoint,
   EndpointCreated,
   EndpointHealth,
+  EndpointSeries,
   RotatedSecret,
 } from "../lib/types";
 
@@ -41,6 +53,15 @@ export function parseEventTypes(text: string): string[] {
     .split(/[\s,]+/)
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+/** "https://api.example.com/hooks" -> "api.example.com"; the whole value if it won't parse. */
+export function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
 }
 
 function StatusBadge({ endpoint }: { endpoint: Endpoint }) {
@@ -198,12 +219,14 @@ type Action = "pause" | "resume" | "test" | "rotate-secret" | "delete";
 function EndpointRow({
   endpoint,
   health,
+  series,
   canEdit,
   onEdit,
   onSecret,
 }: {
   endpoint: Endpoint;
   health?: EndpointHealth;
+  series?: EndpointSeries;
   canEdit: boolean;
   onEdit: () => void;
   onSecret: (title: string, secret: string) => void;
@@ -240,70 +263,105 @@ function EndpointRow({
     },
   });
 
+  const rate = health?.success_rate ?? null;
+  const rateTone =
+    rate === null ? "text-fg-2" : rate >= 0.99 ? "text-ok" : rate >= 0.9 ? "text-warn" : "text-bad";
+
   return (
-    <li className="px-5 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate font-mono text-sm font-medium text-slate-900" title={endpoint.url}>
-              {endpoint.url}
-            </p>
+    <li className="px-5 py-5">
+      <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h3 className="truncate text-sm font-medium text-fg">
+              {endpoint.description || hostOf(endpoint.url)}
+            </h3>
             <StatusBadge endpoint={endpoint} />
           </div>
-          {endpoint.description && (
-            <p className="mt-1 text-sm text-slate-600">{endpoint.description}</p>
-          )}
-          <p className="mt-1 text-xs text-slate-500">
-            {endpoint.event_types.length > 0 ? endpoint.event_types.join(", ") : "All event types"}
-            {endpoint.rate_limit_per_sec !== null && ` · max ${endpoint.rate_limit_per_sec}/s`}
-            {` · created ${timeAgo(endpoint.created_at)}`}
-          </p>
+          <div className="mt-1.5 flex min-w-0 items-center gap-1">
+            <p className="truncate font-mono text-xs text-fg-2" title={endpoint.url}>
+              {endpoint.url}
+            </p>
+            <CopyButton value={endpoint.url} label="Copy URL" />
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-fg-3">
+            {endpoint.event_types.length > 0 ? (
+              endpoint.event_types.map((type) => (
+                <span
+                  key={type}
+                  className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-2xs text-fg-2"
+                >
+                  {type}
+                </span>
+              ))
+            ) : (
+              <span className="rounded border border-line px-1.5 py-0.5 text-2xs">All event types</span>
+            )}
+            {endpoint.rate_limit_per_sec !== null && (
+              <span className="rounded border border-line px-1.5 py-0.5 text-2xs">
+                max {endpoint.rate_limit_per_sec}/s
+              </span>
+            )}
+            <span className="ml-1">created {timeAgo(endpoint.created_at)}</span>
+          </div>
         </div>
-        <dl className="flex shrink-0 gap-6 text-right">
-          <div>
-            <dt className="text-xs text-slate-500">Success (24 h)</dt>
-            <dd className="text-sm font-semibold text-slate-900">
-              {percent(health?.success_rate ?? null)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-slate-500">p95 latency</dt>
-            <dd className="text-sm font-semibold text-slate-900">
-              {milliseconds(health?.p95_ms ?? null)}
-            </dd>
-          </div>
-        </dl>
+
+        <div className="flex shrink-0 items-center gap-6">
+          {series && (
+            <Sparkline
+              succeeded={series.succeeded}
+              failed={series.failed}
+              label="Attempts per hour over the last 24 hours"
+            />
+          )}
+          <dl className="flex gap-6 text-right">
+            <div>
+              <dt className="text-2xs uppercase tracking-[0.06em] text-fg-3">Success 24h</dt>
+              <dd className={`tabular mt-1 text-[15px] font-semibold ${rateTone}`}>{percent(rate)}</dd>
+            </div>
+            <div>
+              <dt className="text-2xs uppercase tracking-[0.06em] text-fg-3">p95</dt>
+              <dd className="tabular mt-1 text-[15px] font-semibold text-fg">
+                {milliseconds(health?.p95_ms ?? null)}
+              </dd>
+            </div>
+          </dl>
+        </div>
       </div>
 
       {canEdit && (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" onClick={onEdit}>
-            Edit
-          </Button>
-          <Button size="sm" busy={act.isPending && act.variables === "test"} onClick={() => act.mutate("test")}>
+        <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-line pt-3">
+          <Button
+            size="sm"
+            icon={<SendIcon width={13} height={13} />}
+            busy={act.isPending && act.variables === "test"}
+            onClick={() => act.mutate("test")}
+          >
             Send test event
           </Button>
+          <Button size="sm" variant="ghost" onClick={onEdit}>
+            Edit
+          </Button>
           {endpoint.status === "active" ? (
-            <Button size="sm" onClick={() => act.mutate("pause")}>
+            <Button size="sm" variant="ghost" icon={<PauseIcon width={13} height={13} />} onClick={() => act.mutate("pause")}>
               Pause
             </Button>
           ) : (
-            <Button size="sm" onClick={() => act.mutate("resume")}>
+            <Button size="sm" variant="ghost" icon={<PlayIcon width={13} height={13} />} onClick={() => act.mutate("resume")}>
               Resume
             </Button>
           )}
-          <Button size="sm" onClick={() => setConfirm("rotate-secret")}>
+          <Button size="sm" variant="ghost" onClick={() => setConfirm("rotate-secret")}>
             Rotate secret
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setConfirm("delete")}>
+          <Button size="sm" variant="ghost" className="ml-auto hover:text-bad" onClick={() => setConfirm("delete")}>
             Delete
           </Button>
         </div>
       )}
       {notice && (
-        <p role="status" className="mt-2 text-xs text-emerald-700">
-          {notice}
-        </p>
+        <div className="mt-3">
+          <Notice>{notice}</Notice>
+        </div>
       )}
       {act.isError && !confirm && (
         <div className="mt-3">
@@ -334,7 +392,7 @@ function EndpointRow({
         onConfirm={() => act.mutate("delete")}
         onClose={() => setConfirm(null)}
       >
-        <span className="font-mono">{endpoint.url}</span> and its delivery history will be removed.
+        <span className="break-all font-mono text-fg">{endpoint.url}</span> and its delivery history will be removed.
         This cannot be undone.
       </ConfirmDialog>
     </li>
@@ -360,9 +418,12 @@ export function EndpointsPage() {
     refetchInterval: 30_000,
   });
   const healthById = new Map(health.data?.map((item) => [item.endpoint_id, item]));
+  // The overview's hourly series doubles as each endpoint's sparkline.
+  const overview = useOverview();
+  const seriesById = new Map(overview.data?.endpoints.map((item) => [item.endpoint_id, item]));
 
   const addButton = canEdit && (
-    <Button variant="primary" onClick={() => setForm({})}>
+    <Button variant="primary" icon={<PlusIcon width={14} height={14} />} onClick={() => setForm({})}>
       Add endpoint
     </Button>
   );
@@ -380,19 +441,20 @@ export function EndpointsPage() {
         <ErrorState error={endpoints.error} onRetry={() => void endpoints.refetch()} />
       )}
       {endpoints.data?.length === 0 && (
-        <EmptyState title="No endpoints yet" action={addButton}>
+        <EmptyState title="No endpoints yet" action={addButton} icon={<EndpointsIcon />}>
           Add the URL of a server that should receive your events. To try Relay without a server of
           your own, create a test receiver first and use its URL.
         </EmptyState>
       )}
       {endpoints.data && endpoints.data.length > 0 && (
         <Card>
-          <ul className="divide-y divide-slate-200">
+          <ul className="divide-y divide-line">
             {endpoints.data.map((endpoint) => (
               <EndpointRow
                 key={endpoint.id}
                 endpoint={endpoint}
                 health={healthById.get(endpoint.id)}
+                series={seriesById.get(endpoint.id)}
                 canEdit={canEdit}
                 onEdit={() => setForm({ endpoint })}
                 onSecret={(title, value) => setSecret({ title, value })}
@@ -429,7 +491,7 @@ export function EndpointsPage() {
         {secret && (
           <>
             <SecretReveal label={secret.title} secret={secret.value} />
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-3 text-[13px] text-fg-2">
               Your server uses it to check that each webhook really came from Relay.
             </p>
             <div className="mt-5 flex justify-end">

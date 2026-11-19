@@ -169,3 +169,29 @@ export interface InvitationInfo {
   role: Role;
   expires_at: string;
 }
+
+/** GET /v1/stats/overview: the last 24 hours, hour by hour. */
+export interface StatsBucket {
+  start: string;
+  succeeded: number;
+  failed: number;
+  p95_ms: number | null;
+}
+
+export interface EndpointSeries {
+  endpoint_id: string;
+  succeeded: number[];
+  failed: number[];
+}
+
+export interface Overview {
+  since: string;
+  buckets: StatsBucket[];
+  endpoints: EndpointSeries[];
+  deliveries_by_status: Record<DeliveryStatus, number>;
+  events: number;
+  attempts: number;
+  successes: number;
+  success_rate: number | null;
+  p95_ms: number | null;
+}

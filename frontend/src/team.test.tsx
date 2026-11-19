@@ -12,17 +12,12 @@ import { Layout } from "./components/Layout";
 import type { Invitation, InvitationInfo, Member, Receiver, Session } from "./lib/types";
 import { ReceiversPage } from "./pages/ReceiversPage";
 import { TeamPage } from "./pages/TeamPage";
-import { type FakeCall, fakeApi, renderPage, sessionAs } from "./test/helpers";
+import { EMPTY_DASHBOARD, type FakeCall, fakeApi, renderPage, sessionAs } from "./test/helpers";
 
 const LOGGED_OUT = {
   "GET /v1/auth/me": { status: 401, body: { code: "not_authenticated", message: "Log in." } },
   "POST /v1/auth/refresh": { status: 401, body: { code: "invalid_session", message: "Ended." } },
 };
-const EMPTY_DASHBOARD = {
-  "GET /v1/endpoints": { body: [] },
-  "GET /v1/endpoints/health": { body: [] },
-};
-
 const ME: Member = {
   user_id: "user-1",
   email: "dev@example.com",
@@ -319,7 +314,7 @@ describe("an invitation link", () => {
     await user.type(screen.getByLabelText("Password"), "a long enough passphrase");
     await user.click(screen.getByRole("button", { name: "Create account and join" }));
 
-    expect(await screen.findByRole("heading", { name: "Endpoints" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
     const register = calls.find((call) => call.path === "/v1/auth/register");
     expect(register?.body).toEqual({
       email: "dev@example.com",

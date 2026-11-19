@@ -50,7 +50,8 @@ describe("EndpointsPage", () => {
 
     expect(await screen.findByText("https://hooks.example.com/orders")).toBeInTheDocument();
     expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText(/order\.paid · max 5\/s/)).toBeInTheDocument();
+    expect(screen.getByText("order.paid")).toBeInTheDocument();
+    expect(screen.getByText("max 5/s")).toBeInTheDocument();
     expect(await screen.findByText("97.5%")).toBeInTheDocument();
     expect(screen.getByText("180 ms")).toBeInTheDocument();
   });

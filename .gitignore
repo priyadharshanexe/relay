@@ -36,3 +36,6 @@ playwright-report/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Local editor/assistant settings
+.claude/

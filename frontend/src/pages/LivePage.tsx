@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { endSessionLocally, useAuth } from "../auth/AuthProvider";
 import { DeliveryStatusBadge, errorKindLabel, useEndpoints } from "../components/delivery";
-import { Badge, Button, Card, EmptyState, PageHeader } from "../components/ui";
+import { LiveIcon, PauseIcon, PlayIcon } from "../components/icons";
+import { Badge, Button, Card, EmptyState, PageHeader, TABLE, TBODY, TD, TH, THEAD, cx } from "../components/ui";
 import { ApiError, api } from "../lib/api";
 import { milliseconds } from "../lib/format";
 import type { LiveUpdate } from "../lib/types";
@@ -79,16 +80,17 @@ export function useLiveFeed(orgId: string) {
   return { updates, connection, paused, setPaused, clear: () => setUpdates([]) };
 }
 
-const CONNECTION: Record<Connection, { label: string; tone: "green" | "amber" | "slate" }> = {
-  live: { label: "Live", tone: "green" },
-  connecting: { label: "Connecting…", tone: "slate" },
-  reconnecting: { label: "Reconnecting…", tone: "amber" },
+const CONNECTION: Record<Connection, { label: string; dot: string }> = {
+  live: { label: "Live", dot: "bg-ok animate-pulse-dot" },
+  connecting: { label: "Connecting…", dot: "bg-fg-3" },
+  reconnecting: { label: "Reconnecting…", dot: "bg-warn" },
 };
 
 export function LivePage() {
   const { organization } = useAuth();
   const { updates, connection, paused, setPaused, clear } = useLiveFeed(organization.id);
-  const state = paused ? { label: "Paused", tone: "slate" as const } : CONNECTION[connection];
+  const state = paused ? { label: "Paused", dot: "bg-fg-3" } : CONNECTION[connection];
+  const failures = updates.filter((update) => update.error_kind !== null).length;
   // The feed carries endpoint ids; the list we already have turns them into URLs.
   const endpoints = useEndpoints();
   const urlOf = new Map(endpoints.data?.map((endpoint) => [endpoint.id, endpoint.url]));
@@ -99,12 +101,21 @@ export function LivePage() {
         title="Live feed"
         description="Delivery attempts as they happen. Nothing here is stored in your browser: open Deliveries for the full history."
         action={
-          <div className="flex items-center gap-3">
-            <span role="status">
-              <Badge tone={state.tone}>{state.label}</Badge>
+          <div className="flex items-center gap-2">
+            <span
+              role="status"
+              className="mr-1 inline-flex h-8 items-center gap-2 rounded-md border border-line px-3 text-xs font-medium text-fg-2"
+            >
+              <span aria-hidden="true" className={cx("h-1.5 w-1.5 rounded-full", state.dot)} />
+              {state.label}
             </span>
-            <Button onClick={() => setPaused(!paused)}>{paused ? "Resume" : "Pause"}</Button>
-            <Button onClick={clear} disabled={updates.length === 0}>
+            <Button
+              icon={paused ? <PlayIcon width={13} height={13} /> : <PauseIcon width={13} height={13} />}
+              onClick={() => setPaused(!paused)}
+            >
+              {paused ? "Resume" : "Pause"}
+            </Button>
+            <Button variant="ghost" onClick={clear} disabled={updates.length === 0}>
               Clear
             </Button>
           </div>
@@ -112,61 +123,74 @@ export function LivePage() {
       />
 
       {updates.length === 0 ? (
-        <EmptyState title="Waiting for deliveries…">
+        <EmptyState title="Waiting for deliveries…" icon={<LiveIcon />}>
           Send an event, or use "Send test event" on an endpoint, and it will show up here within a
           moment.
         </EmptyState>
       ) : (
-        <Card className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-              <tr>
-                <th scope="col" className="px-4 py-3">Time</th>
-                <th scope="col" className="px-4 py-3">Event</th>
-                <th scope="col" className="px-4 py-3">Endpoint</th>
-                <th scope="col" className="px-4 py-3">Attempt</th>
-                <th scope="col" className="px-4 py-3">Result</th>
-                <th scope="col" className="px-4 py-3">Duration</th>
-                <th scope="col" className="px-4 py-3">Delivery is now</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {updates.map((update) => (
-                <tr key={`${update.delivery_id}-${update.attempt}-${update.at}`}>
-                  <td className="whitespace-nowrap px-4 py-2 font-mono text-xs text-slate-600">
-                    {new Date(update.at).toLocaleTimeString()}
-                  </td>
-                  <td className="px-4 py-2">
-                    <Link
-                      to={`/deliveries/${update.delivery_id}`}
-                      className="font-mono text-xs font-medium text-brand-700 hover:underline"
-                    >
-                      {update.event_type}
-                    </Link>
-                  </td>
-                  <td
-                    className="max-w-xs truncate px-4 py-2 font-mono text-xs text-slate-600"
-                    title={urlOf.get(update.endpoint_id)}
-                  >
-                    {urlOf.get(update.endpoint_id) ?? "(deleted endpoint)"}
-                  </td>
-                  <td className="px-4 py-2 text-slate-700">#{update.attempt}</td>
-                  <td className="px-4 py-2">
-                    <Badge tone={update.error_kind === null ? "green" : "red"}>
-                      {update.status_code !== null
-                        ? `HTTP ${update.status_code}`
-                        : errorKindLabel(update.error_kind)}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-2 text-slate-700">{milliseconds(update.duration_ms)}</td>
-                  <td className="px-4 py-2">
-                    <DeliveryStatusBadge status={update.status} />
-                  </td>
+        <>
+          <p className="mb-3 text-xs text-fg-3">
+            <span className="tabular text-fg-2">{updates.length}</span> attempt{updates.length === 1 ? "" : "s"} since
+            you opened this page
+            {failures > 0 && (
+              <>
+                {" · "}
+                <span className="tabular text-bad">{failures}</span> failed
+              </>
+            )}
+          </p>
+          <Card className="overflow-x-auto">
+            <table className={TABLE}>
+              <thead className={THEAD}>
+                <tr>
+                  <th scope="col" className={TH}>Time</th>
+                  <th scope="col" className={TH}>Event</th>
+                  <th scope="col" className={TH}>Endpoint</th>
+                  <th scope="col" className={cx(TH, "text-right")}>Attempt</th>
+                  <th scope="col" className={TH}>Result</th>
+                  <th scope="col" className={cx(TH, "text-right")}>Duration</th>
+                  <th scope="col" className={TH}>Delivery is now</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+              </thead>
+              <tbody className={TBODY}>
+                {updates.map((update) => (
+                  // New rows mount with a brief highlight; existing rows keep their key.
+                  <tr key={`${update.delivery_id}-${update.attempt}-${update.at}`} className="animate-flash">
+                    <td className={cx(TD, "tabular whitespace-nowrap font-mono text-xs text-fg-3")}>
+                      {new Date(update.at).toLocaleTimeString([], { hourCycle: "h23" })}
+                    </td>
+                    <td className={TD}>
+                      <Link
+                        to={`/deliveries/${update.delivery_id}`}
+                        className="font-mono text-xs font-medium text-fg transition-colors hover:text-accent"
+                      >
+                        {update.event_type}
+                      </Link>
+                    </td>
+                    <td
+                      className={cx(TD, "max-w-xs truncate font-mono text-xs text-fg-3")}
+                      title={urlOf.get(update.endpoint_id)}
+                    >
+                      {urlOf.get(update.endpoint_id) ?? "(deleted endpoint)"}
+                    </td>
+                    <td className={cx(TD, "tabular text-right text-fg-2")}>#{update.attempt}</td>
+                    <td className={TD}>
+                      <Badge tone={update.error_kind === null ? "green" : "red"}>
+                        {update.status_code !== null
+                          ? `HTTP ${update.status_code}`
+                          : errorKindLabel(update.error_kind)}
+                      </Badge>
+                    </td>
+                    <td className={cx(TD, "tabular text-right text-fg-2")}>{milliseconds(update.duration_ms)}</td>
+                    <td className={TD}>
+                      <DeliveryStatusBadge status={update.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
       )}
     </>
   );

@@ -20,7 +20,7 @@ test("an owner invites a teammate by link, then removes them", async ({ page, br
     await page.getByLabel("Email").fill(ownerEmail);
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page.getByRole("heading", { name: "Endpoints", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
   });
 
   const link = await test.step("the owner creates an invitation link", async () => {
@@ -59,9 +59,11 @@ test("an owner invites a teammate by link, then removes them", async ({ page, br
     await theirs.getByLabel("Password").fill(PASSWORD);
     await theirs.getByRole("button", { name: "Create account and join" }).click();
 
-    await expect(theirs.getByRole("heading", { name: "Endpoints", exact: true })).toBeVisible();
+    await expect(theirs.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
     await expect(theirs.getByLabel("Organisation")).toContainText("Team E2E Org");
     // A viewer can look, and change nothing.
+    await theirs.getByRole("link", { name: "Endpoints" }).click();
+    await expect(theirs.getByRole("heading", { name: "Endpoints", exact: true })).toBeVisible();
     await expect(theirs.getByRole("button", { name: "Add endpoint" })).toHaveCount(0);
   });
 

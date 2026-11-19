@@ -13,7 +13,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/v1": { target: api, changeOrigin: false },
-      "/receiver": { target: api, changeOrigin: false },
+      // With the slash: "/receivers" is a dashboard page, not the test receiver.
+      "/receiver/": { target: api, changeOrigin: false },
     },
   },
   test: {

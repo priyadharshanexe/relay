@@ -9,6 +9,7 @@ import { DeliveryDetailPage } from "./pages/DeliveryDetailPage";
 import { EndpointsPage } from "./pages/EndpointsPage";
 import { InvitePage } from "./pages/InvitePage";
 import { LivePage } from "./pages/LivePage";
+import { OverviewPage } from "./pages/OverviewPage";
 import { ReceiversPage } from "./pages/ReceiversPage";
 import { TeamPage } from "./pages/TeamPage";
 
@@ -17,7 +18,7 @@ import { TeamPage } from "./pages/TeamPage";
 function AfterLogin() {
   const [params] = useSearchParams();
   const invite = params.get("invite");
-  return <Navigate to={invite ? `/invite/${encodeURIComponent(invite)}` : "/endpoints"} replace />;
+  return <Navigate to={invite ? `/invite/${encodeURIComponent(invite)}` : "/overview"} replace />;
 }
 
 export function App() {
@@ -56,6 +57,7 @@ export function App() {
           <AuthProvider session={session.data}>
             <Routes>
               <Route element={<Layout />}>
+                <Route path="/overview" element={<OverviewPage />} />
                 <Route path="/endpoints" element={<EndpointsPage />} />
                 <Route path="/deliveries" element={<DeliveriesPage />} />
                 <Route path="/deliveries/:id" element={<DeliveryDetailPage />} />
@@ -64,7 +66,7 @@ export function App() {
                 <Route path="/receivers" element={<ReceiversPage />} />
                 <Route path="/api-keys" element={<ApiKeysPage />} />
                 <Route path="/team" element={<TeamPage />} />
-                <Route path="*" element={<Navigate to="/endpoints" replace />} />
+                <Route path="*" element={<Navigate to="/overview" replace />} />
               </Route>
             </Routes>
           </AuthProvider>

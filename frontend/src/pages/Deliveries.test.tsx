@@ -278,9 +278,11 @@ describe("DeliveryDetailPage", () => {
     expect(await screen.findByText("Attempt 1")).toBeInTheDocument();
     expect(screen.getByText("Attempt 2")).toBeInTheDocument();
     expect(screen.getAllByText("HTTP 500")).toHaveLength(2);
-    expect(screen.getByText(/60 s after the\s+previous attempt/)).toBeInTheDocument();
+    // The wait between attempts makes the backoff schedule visible.
+    expect(screen.getByText("1 min after the previous attempt")).toBeInTheDocument();
     expect(screen.getByText("The receiver answered HTTP 500")).toBeInTheDocument();
-    expect(screen.getByText(/"order_id": 42/)).toBeInTheDocument();
+    // The payload, in the JSON inspector.
+    expect(screen.getByTestId("json-view")).toHaveTextContent('"order_id": 42');
   });
 
   it("reveals masked request headers and the response on demand", async () => {

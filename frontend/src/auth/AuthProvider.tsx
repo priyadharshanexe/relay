@@ -74,15 +74,15 @@ export function useLogout(): () => Promise<void> {
 function NoOrganization({ email, onLogout }: { email: string; onLogout: () => void }) {
   return (
     <div className="mx-auto max-w-md px-4 py-16 text-center">
-      <h1 className="text-lg font-semibold text-slate-900">You are not in any organisation</h1>
-      <p className="mt-2 text-sm text-slate-600">
+      <h1 className="text-lg font-semibold text-fg">You are not in any organisation</h1>
+      <p className="mt-2 text-sm text-fg-2">
         <span className="font-medium">{email}</span> no longer belongs to an organisation. Ask an
         owner to send you an invitation link, then open it while logged in.
       </p>
       <button
         type="button"
         onClick={onLogout}
-        className="mt-6 rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
+        className="mt-6 rounded-md bg-panel px-3 py-2 text-sm font-medium text-fg ring-1 ring-inset ring-line-strong hover:bg-hover"
       >
         Log out
       </button>

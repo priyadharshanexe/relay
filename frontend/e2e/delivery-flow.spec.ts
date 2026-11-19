@@ -16,7 +16,7 @@ test("a failing delivery is dead-lettered, then replayed successfully", async ({
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("an-end-to-end-test-passphrase");
     await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page.getByRole("heading", { name: "Endpoints", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
     await expect(page.getByText(email)).toBeVisible();
   });
 
@@ -74,7 +74,7 @@ test("a failing delivery is dead-lettered, then replayed successfully", async ({
   await test.step("the request log shows a masked signature", async () => {
     await page.getByRole("button", { name: "Show request and response" }).first().click();
     await expect(page.getByText(/^v1,.{6}\*{4}$/)).toBeVisible();
-    await expect(page.getByText("webhook-id:")).toBeVisible();
+    await expect(page.getByText("webhook-id", { exact: true })).toBeVisible();
   });
 
   await test.step("fix the receiver", async () => {

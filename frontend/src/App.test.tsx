@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
-import { fakeApi, sessionAs } from "./test/helpers";
+import { EMPTY_DASHBOARD, fakeApi, sessionAs } from "./test/helpers";
 
 function renderApp(path = "/") {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -21,11 +21,6 @@ const LOGGED_OUT = {
   "GET /v1/auth/me": { status: 401, body: { code: "not_authenticated", message: "Log in." } },
   "POST /v1/auth/refresh": { status: 401, body: { code: "invalid_session", message: "Ended." } },
 };
-const EMPTY_DASHBOARD = {
-  "GET /v1/endpoints": { body: [] },
-  "GET /v1/endpoints/health": { body: [] },
-};
-
 describe("App", () => {
   it("sends a logged-out visitor to the login page", async () => {
     fakeApi(LOGGED_OUT);
@@ -48,7 +43,7 @@ describe("App", () => {
     await user.type(screen.getByLabelText("Password"), "a long enough passphrase");
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
-    expect(await screen.findByRole("heading", { name: "Endpoints" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByText("dev@example.com")).toBeInTheDocument();
     const login = calls.find((call) => call.path === "/v1/auth/login");
     expect(login?.body).toEqual({ email: "dev@example.com", password: "a long enough passphrase" });
@@ -68,7 +63,7 @@ describe("App", () => {
     await user.type(screen.getByLabelText("Password"), "a long enough passphrase");
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByRole("heading", { name: "Endpoints" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
   });
 
   it("shows a wrong-password error on the form and stays on the login page", async () => {
