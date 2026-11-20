@@ -1,4 +1,4 @@
-# Relay
+# <img src="docs/images/logo.svg" alt="" width="36" height="36" align="top"> Relay
 
 Reliable, signed webhook delivery: a transactional outbox, retries with backoff, a dead-letter queue and replay.
 
@@ -82,6 +82,17 @@ uv run python -m relay.worker
 ```
 
 ### Dashboard
+
+A React dashboard for watching and fixing deliveries. The Overview draws every delivery as a packet on a live map from your app, through Relay, to each endpoint:
+
+![The delivery map on the Overview](docs/images/delivery-map.gif)
+
+| Sign in | Overview |
+| --- | --- |
+| ![The sign-in page](docs/images/login.png) | ![The Overview with demo data](docs/images/overview.png) |
+| **A dead-lettered delivery** | **Live feed** |
+| ![A delivery with its retry timeline](docs/images/delivery-detail.png) | ![Attempts arriving on the live feed](docs/images/live-feed.png) |
+
 
 ```bash
 cd frontend

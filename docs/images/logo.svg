@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="48" height="48">
+  <style>.ink{stroke:#16150f}@media (prefers-color-scheme: dark){.ink{stroke:#f4f2ec}}</style>
+  <path class="ink" d="M8 40 H 26 C 40 40 42 18 30 18 C 18 18 20 40 34 40 H 52" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M45 33 L53 40 L45 47" fill="none" stroke="#ff6b1a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="8" cy="40" r="5" fill="#ff6b1a"/>
+</svg>
