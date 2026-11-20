@@ -166,7 +166,7 @@ export function Layout() {
         </div>
 
         {/* The tabs. On a phone they scroll sideways inside this strip. */}
-        <nav aria-label="Main" className="mx-auto max-w-6xl overflow-x-auto px-2 md:px-6 [scrollbar-width:none]">
+        <nav aria-label="Main" className="no-scrollbar mx-auto max-w-6xl overflow-x-auto overflow-y-hidden px-2 md:px-6">
           <ul className="flex min-w-max items-center">
             {TABS.map((group, groupIndex) => (
               <li key={groupIndex} className="flex items-center">
@@ -193,7 +193,7 @@ export function Layout() {
                               <motion.span
                                 layoutId="tab-underline"
                                 transition={SPRING}
-                                className="absolute inset-x-2.5 -bottom-px h-[2px] rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]"
+                                className="absolute inset-x-2.5 bottom-0 h-[2px] rounded-full bg-accent shadow-[0_0_12px_var(--color-accent)]"
                               />
                             )}
                           </>

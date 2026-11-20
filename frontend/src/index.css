@@ -292,10 +292,22 @@ body {
   animation: var(--animate-shimmer);
 }
 
-/* Quiet scrollbars that don't fight the content. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-line-strong) transparent;
+/* Quiet scrollbars that don't fight the content. In the base layer, so a
+   utility on an element (like the tab strip's hidden scrollbar) can override it. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+}
+
+/* A strip that scrolls sideways on a phone without ever drawing a scrollbar,
+   including Windows' classic scrollbars with arrow buttons. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /*
