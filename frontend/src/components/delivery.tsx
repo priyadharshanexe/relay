@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api } from "../lib/api";
 import { fullDate, timeAgo } from "../lib/format";
 import type { Delivery, DeliveryStatus, Endpoint, ErrorKind } from "../lib/types";
@@ -56,6 +56,7 @@ export function useEndpoints() {
 }
 
 export function DeliveryTable({ deliveries }: { deliveries: Delivery[] }) {
+  const location = useLocation();
   return (
     <Card className="overflow-x-auto">
       <table className={TABLE}>
@@ -69,14 +70,23 @@ export function DeliveryTable({ deliveries }: { deliveries: Delivery[] }) {
           </tr>
         </thead>
         <tbody className={TBODY}>
-          {deliveries.map((delivery) => (
-            <tr key={delivery.id} className={cx(TR, "group relative")}>
+          {deliveries.map((delivery, index) => (
+            <tr
+              key={delivery.id}
+              style={{ animationDelay: `${Math.min(index, 14) * 28}ms` }}
+              className={cx(TR, "group relative animate-rise [animation-fill-mode:both]")}
+            >
               <td className={cx(TD, "whitespace-nowrap")}>
                 <DeliveryStatusBadge status={delivery.status} />
               </td>
               <td className={cx(TD, "max-w-sm")}>
+                {/* Shares a view-transition name with the detail page's title, so the
+                    event name glides into place when the delivery opens. */}
                 <Link
                   to={`/deliveries/${delivery.id}`}
+                  state={{ from: location.pathname }}
+                  viewTransition
+                  style={{ viewTransitionName: `event-${delivery.id}` }}
                   className="font-mono text-xs font-medium text-fg transition-colors after:absolute after:inset-0 group-hover:text-accent"
                 >
                   {delivery.event_type}

@@ -34,7 +34,15 @@ test("an owner invites a teammate by link, then removes them", async ({ page, br
     await form.getByRole("button", { name: "Create invitation" }).click();
 
     const shown = page.getByRole("dialog", { name: "Send this invitation link" });
-    const url = (await shown.getByTestId("secret-value").textContent()) ?? "";
+    // The link decodes into place; wait until it has stopped changing.
+    const value = shown.getByTestId("secret-value");
+    let url = "";
+    await expect(async () => {
+      const first = (await value.textContent()) ?? "";
+      await page.waitForTimeout(300);
+      url = (await value.textContent()) ?? "";
+      expect(url).toBe(first);
+    }).toPass();
     expect(url).toContain("/invite/");
     await shown.getByRole("button", { name: "I have copied it" }).click();
 

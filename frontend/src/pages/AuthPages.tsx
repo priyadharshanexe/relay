@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SESSION_QUERY_KEY } from "../auth/AuthProvider";
+import { DispatchBackdrop } from "../components/DispatchBackdrop";
+import { ThemeButton } from "../components/Layout";
+import { ProductStory } from "../components/ProductStory";
 import { Logo } from "../components/icons";
 import { Button, ErrorState, Field, Input, LoadingState } from "../components/ui";
 import { api, fieldErrors, setCurrentOrgId } from "../lib/api";
@@ -17,58 +20,6 @@ import {
 
 const LINK = "font-medium text-accent transition-colors hover:text-accent-hover";
 
-/** What Relay actually sends: shown beside the sign-in forms, so the first
- *  screen says what the product does by showing it. */
-function SampleRequest() {
-  const header = (name: string, value: string) => (
-    <div>
-      <span className="text-fg-3">{name}:</span> <span className="text-fg-2">{value}</span>
-    </div>
-  );
-  return (
-    <div className="w-full max-w-md">
-      <p className="mb-3 text-xs text-fg-3">What your server receives</p>
-      <div className="overflow-hidden rounded-xl border border-line bg-canvas">
-        <div className="border-b border-line px-4 py-2.5 font-mono text-xs">
-          <span className="text-accent">POST</span> <span className="text-fg">/webhooks/orders</span>
-        </div>
-        <div className="space-y-0.5 px-4 py-3 font-mono text-[11.5px] leading-relaxed">
-          {header("webhook-id", "msg_01JD8Q2H7M")}
-          {header("webhook-timestamp", "1763560800")}
-          {header("webhook-signature", "v1,K5oZfzN95Z9…")}
-          {header("content-type", "application/json")}
-        </div>
-        <div className="border-t border-line px-4 py-3 font-mono text-[11.5px] leading-relaxed">
-          <div className="json-punct">{"{"}</div>
-          <div className="pl-4">
-            <span className="json-key">"type"</span>
-            <span className="json-punct">: </span>
-            <span className="json-string">"order.paid"</span>
-            <span className="json-punct">,</span>
-          </div>
-          <div className="pl-4">
-            <span className="json-key">"order_id"</span>
-            <span className="json-punct">: </span>
-            <span className="json-number">1042</span>
-            <span className="json-punct">,</span>
-          </div>
-          <div className="pl-4">
-            <span className="json-key">"total"</span>
-            <span className="json-punct">: </span>
-            <span className="json-string">"49.00"</span>
-          </div>
-          <div className="json-punct">{"}"}</div>
-        </div>
-      </div>
-      <ul className="mt-6 space-y-2 text-[13px] text-fg-2">
-        <li>Signed, so the receiver can prove it came from you.</li>
-        <li>Retried on a schedule when the receiver is down.</li>
-        <li>Kept, so a failed one can be replayed later.</li>
-      </ul>
-    </div>
-  );
-}
-
 export function AuthShell({
   title,
   children,
@@ -79,22 +30,34 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <div className="flex flex-col px-6 py-8 sm:px-12">
-        <div className="flex items-center gap-2.5">
-          <Logo />
-          <span className="text-[15px] font-semibold tracking-[-0.02em]">Relay</span>
+    <div className="relative isolate min-h-screen overflow-hidden">
+      <DispatchBackdrop />
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-5 py-6 sm:px-8">
+        <div className="flex items-center justify-between gap-4">
+          <Link to="/login" className="flex w-fit items-center gap-2.5 rounded-md">
+            <Logo className="h-7 w-7" />
+            <span className="font-display text-xl font-semibold tracking-[-0.03em]">Relay</span>
+          </Link>
+          <ThemeButton />
         </div>
-        <div className="flex flex-1 items-center py-12">
-          <div className="w-full max-w-[360px] animate-rise lg:ml-[max(0px,calc(50%-180px-3rem))]">
-            <h1 className="mb-7 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>
-            {children}
-            {footer && <p className="mt-6 text-[13px] text-fg-3">{footer}</p>}
+
+        {/* Wide screens: the story on the left, the form on the right. On a phone
+            the form comes first, then what Relay is. */}
+        <div className="grid flex-1 grid-cols-[minmax(0,1fr)] items-center gap-10 py-8 min-[1100px]:grid-cols-[minmax(0,1.15fr)_400px] min-[1100px]:gap-16">
+          <div className="relative isolate order-2 min-w-0 before:pointer-events-none before:absolute before:-inset-x-8 before:-inset-y-6 before:-z-10 before:rounded-[48px] before:bg-canvas before:blur-2xl before:content-[''] min-[1100px]:order-1">
+            <ProductStory />
+          </div>
+
+          <div className="relative isolate order-1 w-full max-w-[400px] before:pointer-events-none before:absolute before:-inset-x-8 before:-inset-y-6 before:-z-10 before:rounded-[48px] before:bg-canvas before:blur-2xl before:content-[''] animate-rise justify-self-center min-[1100px]:order-2">
+            <div className="rounded-xl border border-line-strong bg-panel shadow-pop">
+              <div className="px-7 pb-7 pt-6">
+                <h1 className="mb-6 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>
+                {children}
+              </div>
+            </div>
+            {footer && <p className="mt-5 text-center text-[13px] text-fg-2">{footer}</p>}
           </div>
         </div>
-      </div>
-      <div aria-hidden="true" className="hidden items-center justify-center border-l border-line bg-panel px-12 lg:flex">
-        <SampleRequest />
       </div>
     </div>
   );
@@ -171,7 +134,7 @@ export function LoginPage() {
     >
       <form onSubmit={submit} className="space-y-4" noValidate>
         {invite && (
-          <p role="note" className="rounded-lg border border-accent-line bg-accent-soft px-3.5 py-2.5 text-[13px] text-[#a9c7ff]">
+          <p role="note" className="rounded-[5px] border-l-[3px] border-l-accent bg-accent-soft px-3.5 py-2.5 text-[13px] text-fg">
             Log in to accept your invitation.
           </p>
         )}

@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { TooltipLayer } from "./components/TooltipLayer";
+import { MotionConfig } from "motion/react";
+import { ToastProvider } from "./components/motionkit";
 import { ApiError } from "./lib/api";
 import "./index.css";
 
@@ -22,7 +24,12 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        {/* Every motion animation honours the system's reduced-motion setting. */}
+        <MotionConfig reducedMotion="user">
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </MotionConfig>
         <TooltipLayer />
       </BrowserRouter>
     </QueryClientProvider>

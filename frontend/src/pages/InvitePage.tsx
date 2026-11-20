@@ -92,7 +92,7 @@ export function InvitePage({ session }: { session: Session | null }) {
     return (
       <AuthShell title={`Join ${organization_name}`}>
         {summary}
-        <p role="alert" className="mt-4 rounded-lg border border-warn/25 bg-warn-soft px-3.5 py-2.5 text-[13px] text-[#f8d59a]">
+        <p role="alert" className="mt-4 rounded-[5px] border-l-[3px] border-l-warn bg-warn-soft px-3.5 py-2.5 text-[13px] text-fg">
           You are logged in as <strong>{session.user.email}</strong>. Log out, then open this link
           again as {email}.
         </p>

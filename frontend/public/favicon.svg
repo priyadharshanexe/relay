@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>.ink{stroke:#16150f}@media (prefers-color-scheme: dark){.ink{stroke:#f4f2ec}}</style>
+  <path class="ink" d="M3 22 H 11 C 21 22 22 6 15 6 C 8 6 9 22 18 22 H 27" fill="none" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22.5 17 L28 22 L22.5 27" fill="none" stroke="#ff6b1a" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

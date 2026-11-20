@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CheckIcon, CopyIcon, ShieldIcon } from "./icons";
+import { ScrambleText } from "./motionkit";
 import { Button } from "./ui";
 
 /**
@@ -36,7 +37,7 @@ export function SecretReveal({ label, secret }: { label: string; secret: string 
           data-testid="secret-value"
           className="block min-w-0 flex-1 select-all overflow-x-auto whitespace-nowrap font-mono text-xs text-fg"
         >
-          {secret}
+          <ScrambleText text={secret} />
         </code>
         <Button size="sm" onClick={copy} icon={copied ? <CheckIcon width={13} height={13} className="text-ok" /> : <CopyIcon width={13} height={13} />}>
           {copied ? "Copied" : "Copy"}

@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { DeliveryTable, STATUS_OPTIONS, useEndpoints } from "../components/delivery";
 import {
@@ -16,6 +16,7 @@ import {
   Select,
 } from "../components/ui";
 import { DeadLetterIcon, DeliveriesIcon, ReplayIcon } from "../components/icons";
+import { ReplayBurst } from "../components/ReplayBurst";
 import { api } from "../lib/api";
 import type { Delivery, Page } from "../lib/types";
 
@@ -217,6 +218,7 @@ function DeliveryList({
   emptyTitle,
   emptyText,
   emptyIcon,
+  emptyAction,
 }: {
   filters: Filters;
   active: boolean;
@@ -224,6 +226,7 @@ function DeliveryList({
   emptyTitle: string;
   emptyText: string;
   emptyIcon?: React.ReactNode;
+  emptyAction?: React.ReactNode;
 }) {
   const query = useDeliveries(filters);
   const deliveries = query.data?.pages.flatMap((page) => page.items) ?? [];
@@ -236,7 +239,7 @@ function DeliveryList({
         Try a wider time range or a different status.
       </EmptyState>
     ) : (
-      <EmptyState title={emptyTitle} icon={emptyIcon}>
+      <EmptyState title={emptyTitle} icon={emptyIcon} action={emptyAction}>
         {emptyText}
       </EmptyState>
     );
@@ -275,6 +278,11 @@ export function DeliveriesPage() {
         emptyTitle="No deliveries yet"
         emptyText="Deliveries appear here as soon as you send an event that an endpoint subscribes to."
         emptyIcon={<DeliveriesIcon />}
+        emptyAction={
+          <Link to="/endpoints" className="text-[13px] font-medium text-accent hover:text-accent-hover">
+            Send a test event from Endpoints →
+          </Link>
+        }
       />
     </>
   );
@@ -287,6 +295,7 @@ export function DeadLetterPage() {
   const { filters, setFilter, clear, active } = useFilters({ status: "dead" });
   const [confirming, setConfirming] = useState(false);
   const [replayed, setReplayed] = useState<number | null>(null);
+  const [burst, setBurst] = useState(0);
 
   const replay = useMutation({
     mutationFn: () =>
@@ -303,6 +312,7 @@ export function DeadLetterPage() {
     onSuccess: async (result) => {
       setConfirming(false);
       setReplayed(result.replayed);
+      setBurst((n) => n + 1);
       await queryClient.invalidateQueries({ queryKey: ["deliveries"] });
     },
   });
@@ -321,7 +331,8 @@ export function DeadLetterPage() {
         }
       />
       {replayed !== null && (
-        <div className="mb-5">
+        <div className="relative mb-5">
+          {replayed > 0 && <ReplayBurst key={burst} count={replayed} />}
           <Notice tone={replayed === 0 ? "info" : "ok"}>
             {replayed === 0
               ? "Nothing to replay."

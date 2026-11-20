@@ -120,7 +120,7 @@ export function JsonView({ value, title = "JSON" }: { value: unknown; title?: st
   const text = JSON.stringify(value, null, 2);
   const lines = text.split("\n").length;
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-[#101114]">
+    <div className="overflow-hidden rounded-lg border border-line bg-sunken/60">
       <div className="flex items-center justify-between border-b border-line bg-panel px-3.5 py-2">
         <span className="text-xs text-fg-2">
           {title}

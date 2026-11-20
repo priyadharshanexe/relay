@@ -34,7 +34,7 @@ function Tooltip({ children, align }: { children: React.ReactNode; align: "left"
     <div
       role="tooltip"
       className={cx(
-        "pointer-events-none absolute bottom-full z-10 mb-2 w-max min-w-36 animate-rise rounded-lg border border-line-strong bg-raised px-3 py-2 text-xs shadow-pop",
+        "pointer-events-none absolute bottom-full z-10 mb-2 w-max min-w-36 animate-fade rounded-md border border-line-strong bg-panel px-3 py-2 text-xs shadow-pop",
         align === "left" ? "left-0" : "right-0",
       )}
     >
@@ -47,7 +47,7 @@ function Tooltip({ children, align }: { children: React.ReactNode; align: "left"
 /** Successful and failed attempts per hour, stacked. */
 export function AttemptsChart({ buckets }: { buckets: StatsBucket[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
-  const max = niceMax(Math.max(...buckets.map((b) => b.succeeded + b.failed), 0));
+  const max = axisTop(buckets.map((b) => b.succeeded + b.failed));
   const total = buckets.reduce((sum, b) => sum + b.succeeded + b.failed, 0);
   const failed = buckets.reduce((sum, b) => sum + b.failed, 0);
 
@@ -81,20 +81,25 @@ export function AttemptsChart({ buckets }: { buckets: StatsBucket[] }) {
                   onMouseEnter={() => setHovered(index)}
                 >
                   {active && (
-                    <div aria-hidden="true" className="absolute inset-x-[-1.5px] inset-y-0 rounded-sm bg-white/[0.03]" />
+                    <div aria-hidden="true" className="absolute inset-x-[-1.5px] inset-y-0 rounded-sm bg-hover/70" />
                   )}
                   <div
                     className={cx(
-                      "relative flex flex-col justify-end overflow-hidden rounded-[3px] transition-opacity",
-                      hovered !== null && !active && "opacity-50",
+                      // Each bar grows up from the baseline, left to right.
+                      "relative flex origin-bottom animate-grow flex-col justify-end overflow-hidden rounded-[2px] transition-opacity",
+                      hovered !== null && !active && "opacity-45",
                     )}
-                    style={{ height: `${(sum / max) * 100}%`, minHeight: sum ? 2 : 0 }}
+                    style={{
+                      height: `${(sum / max) * 100}%`,
+                      minHeight: sum ? 2 : 0,
+                      animationDelay: `${index * 18}ms`,
+                    }}
                   >
                     {bucket.failed > 0 && (
                       <div className="bg-bad" style={{ height: `${(bucket.failed / sum) * 100}%`, minHeight: 2 }} />
                     )}
                     {bucket.succeeded > 0 && (
-                      <div className="flex-1 bg-accent" />
+                      <div className="flex-1 bg-ok" />
                     )}
                   </div>
                   {active && (
@@ -102,7 +107,7 @@ export function AttemptsChart({ buckets }: { buckets: StatsBucket[] }) {
                       <p className="mb-1.5 font-medium text-fg">{hourLabel(bucket.start)}</p>
                       <p className="flex justify-between gap-4 text-fg-2">
                         <span className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-sm bg-accent" /> Delivered
+                          <span className="h-2 w-2 rounded-sm bg-ok" /> Delivered
                         </span>
                         <span className="tabular text-fg">{bucket.succeeded}</span>
                       </p>
@@ -128,9 +133,9 @@ export function AttemptsChart({ buckets }: { buckets: StatsBucket[] }) {
   );
 }
 
-function HourAxis({ buckets }: { buckets: StatsBucket[] }) {
+function HourAxis({ buckets, offset = "pl-9" }: { buckets: StatsBucket[]; offset?: string }) {
   return (
-    <div aria-hidden="true" className="mt-2 flex pl-9 text-2xs text-fg-3">
+    <div aria-hidden="true" className={cx("mt-2 flex text-2xs text-fg-3", offset)}>
       {buckets.map((bucket, index) => (
         <span key={bucket.start} className="tabular flex-1 text-center">
           {index % 6 === 0 || index === buckets.length - 1 ? hourLabel(bucket.start) : ""}
@@ -141,111 +146,97 @@ function HourAxis({ buckets }: { buckets: StatsBucket[] }) {
 }
 
 // ------------------------------------------------------------- latency chart
-/** p95 latency per hour, as a line through each measured hour. Idle hours are gaps. */
+/** The top of a value axis: the largest value plus 15% headroom, rounded, so
+ *  the tallest mark never touches the top of the plot. */
+export function axisTop(values: number[]): number {
+  return niceMax(Math.max(...values, 0) * 1.15);
+}
+
+/**
+ * p95 latency per hour, one bar per hour that had attempts. An hour without
+ * attempts has no latency to show, so it is drawn as an empty slot marked on
+ * the baseline rather than joined across with a line that would invent values.
+ */
 export function LatencyChart({ buckets }: { buckets: StatsBucket[] }) {
   const [hovered, setHovered] = useState<number | null>(null);
-  const values = buckets.map((b) => b.p95_ms);
-  const known = values.filter((v): v is number => v !== null);
-  const max = niceMax(Math.max(...known, 0));
-  const width = 100;
-  const height = 40;
-  const x = (index: number) => (index / Math.max(buckets.length - 1, 1)) * width;
-  const y = (value: number) => height - (value / max) * height;
-
-  // One path segment per run of hours that had attempts.
-  const segments: { x: number; y: number }[][] = [];
-  let current: { x: number; y: number }[] = [];
-  values.forEach((value, index) => {
-    if (value === null) {
-      if (current.length) segments.push(current);
-      current = [];
-    } else {
-      current.push({ x: x(index), y: y(value) });
-    }
-  });
-  if (current.length) segments.push(current);
-
-  const line = (points: { x: number; y: number }[]) =>
-    points.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
+  const known = buckets.map((b) => b.p95_ms).filter((v): v is number => v !== null);
+  const max = axisTop(known);
 
   return (
     <figure>
       <figcaption className="sr-only">
         {known.length
-          ? `95th-percentile latency over the last 24 hours, highest ${milliseconds(Math.max(...known))}.`
+          ? `95th-percentile latency over the last 24 hours, highest ${milliseconds(Math.max(...known))}; ${
+              buckets.length - known.length
+            } hours had no attempts.`
           : "No attempts in the last 24 hours."}
       </figcaption>
       <div className="flex gap-3">
-        <div aria-hidden="true" className="tabular flex h-36 flex-col justify-between text-right text-2xs text-fg-3">
+        <div aria-hidden="true" className="tabular flex h-40 w-12 flex-col justify-between py-px text-right text-2xs text-fg-3">
           <span>{milliseconds(max)}</span>
+          <span>{milliseconds(max / 2)}</span>
           <span>0</span>
         </div>
-        <div className="relative h-36 flex-1" onMouseLeave={() => setHovered(null)}>
+        <div className="relative h-40 flex-1">
           <div aria-hidden="true" className="absolute inset-0 flex flex-col justify-between">
+            <div className="border-t border-dashed border-line" />
             <div className="border-t border-dashed border-line" />
             <div className="border-t border-line-strong" />
           </div>
-          <svg
-            aria-hidden="true"
-            viewBox={`0 0 ${width} ${height}`}
-            preserveAspectRatio="none"
-            className="absolute inset-0 h-full w-full overflow-visible"
-          >
-            {segments.map((points) => (
-              <g key={`${points[0]?.x}`}>
-                <path
-                  d={line(points)}
-                  fill="none"
-                  stroke="var(--color-accent)"
-                  strokeWidth="1.75"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </g>
-            ))}
-          </svg>
-          {/* Hover targets and points, in HTML so they don't stretch. */}
-          <div className="absolute inset-0 flex">
-            {buckets.map((bucket, index) => (
-              <div
-                key={bucket.start}
-                className="relative h-full flex-1"
-                onMouseEnter={() => setHovered(index)}
-              >
-                {/* Every measured hour gets a point, so an hour on its own
-                    (no neighbour to draw a line to) is still visible. */}
-                {bucket.p95_ms !== null && hovered !== index && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent"
-                    style={{ top: `${(y(bucket.p95_ms) / height) * 100}%` }}
-                  />
-                )}
-                {hovered === index && (
-                  <>
-                    <div aria-hidden="true" className="absolute inset-y-0 left-1/2 border-l border-line-strong" />
-                    {bucket.p95_ms !== null && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent bg-canvas"
-                        style={{ top: `${(y(bucket.p95_ms) / height) * 100}%` }}
-                      />
-                    )}
+          <div className="relative flex h-full items-end gap-[3px]" onMouseLeave={() => setHovered(null)}>
+            {buckets.map((bucket, index) => {
+              const value = bucket.p95_ms;
+              const active = hovered === index;
+              return (
+                <div
+                  key={bucket.start}
+                  className="relative flex h-full flex-1 flex-col justify-end"
+                  onMouseEnter={() => setHovered(index)}
+                >
+                  {active && (
+                    <div aria-hidden="true" className="absolute inset-x-[-1.5px] inset-y-0 rounded-sm bg-hover/70" />
+                  )}
+                  {value === null ? (
+                    // No attempts this hour: a small mark on the baseline, not a bar.
+                    <div aria-hidden="true" className="relative mx-auto mb-[-1px] h-[3px] w-1 rounded-full bg-line-strong" />
+                  ) : (
+                    <div
+                      className={cx(
+                        "relative origin-bottom animate-grow rounded-t-[2px] bg-fg-2/70 transition-opacity",
+                        hovered !== null && !active && "opacity-45",
+                      )}
+                      style={{
+                        height: `${(value / max) * 100}%`,
+                        minHeight: 2,
+                        animationDelay: `${index * 18}ms`,
+                      }}
+                    />
+                  )}
+                  {active && (
                     <Tooltip align={index > buckets.length / 2 ? "right" : "left"}>
                       <p className="font-medium text-fg">{hourLabel(bucket.start)}</p>
                       <p className="mt-1 text-fg-2">
-                        p95 <span className="tabular text-fg">{milliseconds(bucket.p95_ms)}</span>
+                        {value === null ? (
+                          "No attempts this hour"
+                        ) : (
+                          <>
+                            p95 <span className="tabular text-fg">{milliseconds(value)}</span>
+                          </>
+                        )}
                       </p>
                     </Tooltip>
-                  </>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
-      <HourAxis buckets={buckets} />
+      <HourAxis buckets={buckets} offset="pl-[3.75rem]" />
+      <p className="mt-2 flex items-center gap-1.5 text-2xs text-fg-3">
+        <span aria-hidden="true" className="inline-block h-[3px] w-1 rounded-full bg-line-strong" />
+        no attempts that hour
+      </p>
     </figure>
   );
 }
@@ -270,7 +261,7 @@ export function Sparkline({
           key={index}
           className={cx(
             "flex-1 rounded-[1px]",
-            total === 0 ? "bg-line" : (failed[index] ?? 0) > 0 ? "bg-bad" : "bg-accent/80",
+            total === 0 ? "bg-line" : (failed[index] ?? 0) > 0 ? "bg-bad" : "bg-ok/80",
           )}
           style={{ height: total === 0 ? 2 : `${Math.max((total / max) * 100, 12)}%` }}
         />
@@ -282,8 +273,8 @@ export function Sparkline({
 // ------------------------------------------------------- state distribution
 const STATE_ORDER: { status: DeliveryStatus; label: string; color: string }[] = [
   { status: "succeeded", label: "Succeeded", color: "bg-ok" },
-  { status: "pending", label: "Pending", color: "bg-fg-3" },
-  { status: "in_flight", label: "Sending", color: "bg-accent" },
+  { status: "pending", label: "Pending", color: "bg-pending" },
+  { status: "in_flight", label: "Sending", color: "bg-flight" },
   { status: "retrying", label: "Retrying", color: "bg-warn" },
   { status: "dead", label: "Dead", color: "bg-bad" },
 ];
@@ -293,7 +284,7 @@ export function StateBreakdown({ counts }: { counts: Record<DeliveryStatus, numb
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
   return (
     <div>
-      <div aria-hidden="true" className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-line">
+      <div aria-hidden="true" className="flex h-2.5 animate-reveal gap-0.5 overflow-hidden rounded-[3px] bg-line">
         {total > 0 &&
           STATE_ORDER.filter(({ status }) => counts[status] > 0).map(({ status, color }) => (
             <div key={status} className={color} style={{ width: `${(counts[status] / total) * 100}%` }} />

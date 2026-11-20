@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { endSessionLocally, useAuth } from "../auth/AuthProvider";
 import { DeliveryStatusBadge, errorKindLabel, useEndpoints } from "../components/delivery";
+import { Throughput } from "../components/Throughput";
 import { LiveIcon, PauseIcon, PlayIcon } from "../components/icons";
 import { Badge, Button, Card, EmptyState, PageHeader, TABLE, TBODY, TD, TH, THEAD, cx } from "../components/ui";
 import { ApiError, api } from "../lib/api";
@@ -81,7 +82,7 @@ export function useLiveFeed(orgId: string) {
 }
 
 const CONNECTION: Record<Connection, { label: string; dot: string }> = {
-  live: { label: "Live", dot: "bg-ok animate-pulse-dot" },
+  live: { label: "Live", dot: "beacon bg-ok text-ok" },
   connecting: { label: "Connecting…", dot: "bg-fg-3" },
   reconnecting: { label: "Reconnecting…", dot: "bg-warn" },
 };
@@ -106,7 +107,7 @@ export function LivePage() {
               role="status"
               className="mr-1 inline-flex h-8 items-center gap-2 rounded-md border border-line px-3 text-xs font-medium text-fg-2"
             >
-              <span aria-hidden="true" className={cx("h-1.5 w-1.5 rounded-full", state.dot)} />
+              <span aria-hidden="true" className={cx("relative h-1.5 w-1.5 rounded-full", state.dot)} />
               {state.label}
             </span>
             <Button
@@ -122,8 +123,18 @@ export function LivePage() {
         }
       />
 
+      <Throughput updates={updates} />
+
       {updates.length === 0 ? (
-        <EmptyState title="Waiting for deliveries…" icon={<LiveIcon />}>
+        <EmptyState
+          title="Waiting for deliveries…"
+          icon={<LiveIcon />}
+          action={
+            <Link to="/endpoints" className="text-[13px] font-medium text-accent hover:text-accent-hover">
+              Send a test event from Endpoints →
+            </Link>
+          }
+        >
           Send an event, or use "Send test event" on an endpoint, and it will show up here within a
           moment.
         </EmptyState>
@@ -154,8 +165,8 @@ export function LivePage() {
               </thead>
               <tbody className={TBODY}>
                 {updates.map((update) => (
-                  // New rows mount with a brief highlight; existing rows keep their key.
-                  <tr key={`${update.delivery_id}-${update.attempt}-${update.at}`} className="animate-flash">
+                  // New rows slide in from the top; existing rows keep their key and stay put.
+                  <tr key={`${update.delivery_id}-${update.attempt}-${update.at}`} className="[animation:slide-in_380ms_cubic-bezier(0.2,0.9,0.25,1.35)_both,flash_1.4s_ease-out]">
                     <td className={cx(TD, "tabular whitespace-nowrap font-mono text-xs text-fg-3")}>
                       {new Date(update.at).toLocaleTimeString([], { hourCycle: "h23" })}
                     </td>

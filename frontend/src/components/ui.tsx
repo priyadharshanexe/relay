@@ -8,7 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { ApiError, errorMessage } from "../lib/api";
+import { useCountUp } from "../lib/motion";
+import { RevealText, useMagnet, useSpotlight } from "./motionkit";
 import { CheckIcon, CloseIcon, CopyIcon } from "./icons";
 
 export function cx(...classes: (string | false | null | undefined)[]): string {
@@ -19,13 +22,11 @@ export function cx(...classes: (string | false | null | undefined)[]): string {
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 
 const VARIANTS: Record<Variant, string> = {
-  // A faint top highlight gives the accent button a little depth.
   primary:
-    "bg-accent text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18)] hover:bg-accent-hover disabled:bg-accent/40 disabled:text-white/60",
+    "magnetic bg-accent text-on-accent shadow-[0_1px_0_rgb(0_0_0/0.12)] hover:bg-accent-hover hover:shadow-[var(--glow-signal)] disabled:opacity-45 disabled:hover:shadow-none",
   secondary:
-    "bg-raised text-fg border border-line-strong hover:bg-hover hover:border-[#3d3e47] disabled:text-fg-3 disabled:hover:bg-raised",
-  danger:
-    "bg-bad-soft text-bad border border-bad/30 hover:bg-bad/20 hover:border-bad/50 disabled:opacity-50",
+    "bg-panel text-fg border border-line-strong shadow-[0_1px_0_rgb(0_0_0/0.04)] hover:bg-hover disabled:text-fg-3 disabled:hover:bg-panel",
+  danger: "bg-panel text-bad border border-bad/35 hover:bg-bad-soft disabled:opacity-50",
   ghost: "text-fg-2 hover:bg-hover hover:text-fg disabled:text-fg-3 disabled:hover:bg-transparent",
 };
 
@@ -47,14 +48,17 @@ export function Button({
   type = "button",
   ...rest
 }: ButtonProps) {
+  const magnet = useMagnet();
   return (
     <button
+      {...(variant === "primary" ? magnet : {})}
       type={type}
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       className={cx(
-        "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-[background-color,border-color,color,transform] duration-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100",
-        size === "sm" ? "h-7 px-2.5 text-xs" : "h-8 px-3 text-[13px]",
+        // Presses down a little: feedback you can feel, never a bounce.
+        "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-[5px] font-medium transition-[background-color,border-color,color,transform,opacity] duration-150 active:translate-y-px active:scale-[0.985] disabled:cursor-not-allowed disabled:active:translate-y-0 disabled:active:scale-100",
+        size === "sm" ? "h-7 px-2.5 text-xs" : "h-9 px-3.5 text-[13px]",
         VARIANTS[variant],
         className,
       )}
@@ -81,7 +85,7 @@ export function Field({ label, hint, error, children }: FieldProps) {
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-fg-2">
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-fg">
         {label}
       </label>
       {children({ id, "aria-describedby": describedBy, "aria-invalid": error ? true : undefined })}
@@ -91,7 +95,7 @@ export function Field({ label, hint, error, children }: FieldProps) {
         </p>
       )}
       {error && (
-        <p id={`${id}-error`} className="mt-1.5 text-xs text-bad">
+        <p id={`${id}-error`} className="mt-1.5 animate-fade text-xs text-bad">
           {error}
         </p>
       )}
@@ -100,37 +104,46 @@ export function Field({ label, hint, error, children }: FieldProps) {
 }
 
 const INPUT =
-  "block h-9 w-full rounded-md border border-line-strong bg-raised px-3 text-[13px] text-fg transition-colors placeholder:text-fg-3 hover:border-[#3d3e47] focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent-soft read-only:bg-panel read-only:text-fg-2 disabled:opacity-60 aria-[invalid=true]:border-bad/70 aria-[invalid=true]:focus:ring-bad-soft";
+  "block h-9 w-full rounded-[5px] border border-line-strong bg-raised px-3 text-[13px] text-fg transition-[border-color,box-shadow] duration-150 placeholder:text-fg-3 hover:border-fg-3/60 focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent-soft disabled:opacity-60 aria-[invalid=true]:border-bad/70 aria-[invalid=true]:focus:ring-bad-soft";
 
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cx(INPUT, className)} {...rest} />;
+  // Read-only styling for inputs only: every <select> also matches :read-only.
+  return <input className={cx(INPUT, "read-only:bg-hover read-only:text-fg-2", className)} {...rest} />;
 }
 
-// A chevron drawn in the field's muted text colour.
+// A chevron for browsers without the customizable select (it draws its own).
 const CHEVRON =
-  "bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236c6d77' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E\")] bg-[length:16px] bg-[right_0.5rem_center] bg-no-repeat";
+  "bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238a867b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4.5 6.5 3.5 3.5 3.5-3.5'/%3E%3C/svg%3E\")] bg-[length:16px] bg-[right_0.5rem_center] bg-no-repeat";
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select className={cx(INPUT, CHEVRON, "cursor-pointer appearance-none pr-8 supports-[appearance:base-select]:pr-2.5", className)} {...rest}>
+    <select
+      className={cx(INPUT, CHEVRON, "cursor-pointer appearance-none pr-8 supports-[appearance:base-select]:pr-2.5", className)}
+      {...rest}
+    >
       {children}
     </select>
   );
 }
 
 // ---------------------------------------------------------------------- Badges
+/**
+ * green: succeeded / closed / 2xx; amber: retrying / half-open / 4xx;
+ * red: dead / open / 5xx; blue: in flight; slate: pending, or not a state.
+ */
 export type Tone = "green" | "red" | "amber" | "slate" | "blue";
 
 const TONES: Record<Tone, { pill: string; dot: string }> = {
   green: { pill: "bg-ok-soft text-ok", dot: "bg-ok" },
   red: { pill: "bg-bad-soft text-bad", dot: "bg-bad" },
   amber: { pill: "bg-warn-soft text-warn", dot: "bg-warn" },
-  slate: { pill: "bg-hover text-fg-2", dot: "bg-fg-3" },
-  blue: { pill: "bg-accent-soft text-[#8fb6ff]", dot: "bg-accent" },
+  slate: { pill: "bg-hover text-fg-2", dot: "bg-pending" },
+  blue: { pill: "bg-flight-soft text-flight", dot: "bg-flight" },
 };
 
-/** A status pill. The dot repeats the colour, so the state still reads for
- *  people who can't tell the colours apart: the label always says it in words. */
+/** A state chip. When the state changes (pending -> in flight -> succeeded) the
+ *  colours cross-fade rather than jump. The label always says the state in
+ *  words, so colour is never the only signal. */
 export function Badge({
   tone = "slate",
   dot = true,
@@ -143,11 +156,16 @@ export function Badge({
   return (
     <span
       className={cx(
-        "inline-flex h-5 items-center gap-1.5 whitespace-nowrap rounded-full px-2 text-2xs font-medium",
+        "inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-[4px] px-2 text-xs font-medium transition-colors duration-300",
         TONES[tone].pill,
       )}
     >
-      {dot && <span aria-hidden="true" className={cx("h-1.5 w-1.5 rounded-full", TONES[tone].dot)} />}
+      {dot && (
+        <span
+          aria-hidden="true"
+          className={cx("h-1.5 w-1.5 rounded-full transition-colors duration-300", TONES[tone].dot, tone === "blue" && "animate-pulse")}
+        />
+      )}
       {children}
     </span>
   );
@@ -167,11 +185,22 @@ export function Spinner({ small = false }: { small?: boolean }) {
   );
 }
 
-export function LoadingState({ label = "Loading…" }: { label?: string }) {
+/** A placeholder shaped like the content on its way, instead of a spinner. */
+export function Skeleton({ className }: { className?: string }) {
+  return <span aria-hidden="true" className={cx("skeleton block", className)} />;
+}
+
+export function LoadingState({ label = "Loading…", rows = 4 }: { label?: string; rows?: number }) {
   return (
-    <div className="flex items-center justify-center gap-3 py-20 text-[13px] text-fg-3">
-      <Spinner />
-      {label}
+    <div role="status" aria-label={label} className="space-y-3 py-2">
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: rows }, (_, index) => (
+        <div key={index} className="flex items-center gap-4 border-b border-line py-3 last:border-0">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className={cx("h-4", ["w-2/5", "w-1/3", "w-1/2", "w-1/4"][index % 4])} />
+          <Skeleton className="ml-auto h-4 w-16" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -188,13 +217,13 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-line-strong px-6 py-14 text-center">
+    <div className="animate-rise rounded-lg border border-dashed border-line-strong px-6 py-14 text-center">
       {icon && (
-        <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg border border-line bg-raised text-fg-2">
+        <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-md border border-line bg-panel text-fg-2">
           {icon}
         </div>
       )}
-      <h3 className="text-sm font-medium text-fg">{title}</h3>
+      <h3 className="text-lg font-semibold tracking-[-0.01em] text-fg">{title}</h3>
       {children && <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-relaxed text-fg-2">{children}</p>}
       {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
@@ -208,9 +237,9 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
   // mistake (wrong password, invalid input) it is only noise.
   const requestId = error instanceof ApiError && error.status >= 500 ? error.requestId : null;
   return (
-    <div role="alert" className="rounded-lg border border-bad/25 bg-bad-soft px-3.5 py-3">
-      <p className="text-[13px] text-[#ff9b9b]">{errorMessage(error)}</p>
-      {requestId && <p className="mt-1 font-mono text-2xs text-bad/70">Request ID: {requestId}</p>}
+    <div role="alert" className="animate-fade rounded-[5px] border border-bad/30 border-l-[3px] border-l-bad bg-bad-soft px-3.5 py-3">
+      <p className="text-[13px] text-fg">{errorMessage(error)}</p>
+      {requestId && <p className="mt-1 font-mono text-2xs text-fg-2">Request ID: {requestId}</p>}
       {onRetry && (
         <Button size="sm" className="mt-3" onClick={onRetry}>
           Try again
@@ -229,12 +258,15 @@ export function Notice({
   children: ReactNode;
 }) {
   const styles = {
-    ok: "border-ok/25 bg-ok-soft text-[#8fe8bb]",
-    warn: "border-warn/25 bg-warn-soft text-[#f8d59a]",
-    info: "border-accent-line bg-accent-soft text-[#a9c7ff]",
+    ok: "border-l-ok bg-ok-soft",
+    warn: "border-l-warn bg-warn-soft",
+    info: "border-l-accent bg-accent-soft",
   }[tone];
   return (
-    <p role="status" className={cx("animate-rise rounded-lg border px-3.5 py-2.5 text-[13px] leading-relaxed", styles)}>
+    <p
+      role="status"
+      className={cx("animate-rise rounded-[5px] border-l-[3px] px-3.5 py-2.5 text-[13px] leading-relaxed text-fg", styles)}
+    >
       {children}
     </p>
   );
@@ -256,9 +288,11 @@ export function PageHeader({
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
         {eyebrow && <div className="mb-2">{eyebrow}</div>}
-        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-fg">{title}</h1>
+        <h1 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.03em] text-fg">
+          <RevealText>{title}</RevealText>
+        </h1>
         {description && (
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-fg-2">{description}</p>
+          <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-fg-2">{description}</p>
         )}
       </div>
       {action}
@@ -266,6 +300,7 @@ export function PageHeader({
   );
 }
 
+/** A section heading sitting on a hairline rule, like a printed report. */
 export function SectionTitle({
   children,
   id,
@@ -276,8 +311,8 @@ export function SectionTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
-      <h2 id={id} className="text-[13px] font-medium text-fg">
+    <div className="mb-4 flex min-h-8 items-end justify-between gap-3 border-b border-line pb-2">
+      <h2 id={id} className="text-lg font-semibold tracking-[-0.01em] text-fg">
         {children}
       </h2>
       {action}
@@ -285,20 +320,47 @@ export function SectionTitle({
   );
 }
 
-export function Card({ children, className }: { children: ReactNode; className?: string }) {
+export function Card({
+  children,
+  className,
+  interactive = false,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** Lights up under the pointer: for cards you act on. */
+  interactive?: boolean;
+}) {
+  const spotlight = useSpotlight();
   return (
-    <div className={cx("rounded-xl border border-line bg-panel", className)}>{children}</div>
+    <div
+      {...(interactive ? spotlight : {})}
+      className={cx("rounded-lg border border-line bg-panel", interactive && "spotlight", className)}
+    >
+      {children}
+    </div>
   );
 }
 
 /** Shared table styling: quiet headers, hairline rows, a hover that only hints. */
 export const TABLE = "min-w-full text-[13px]";
-export const THEAD =
-  "border-b border-line text-left text-xs text-fg-3";
-export const TH = "px-4 py-2.5 font-normal";
+export const THEAD = "border-b border-line text-left text-xs text-fg-3";
+export const TH = "px-4 py-2.5 font-medium";
 export const TBODY = "divide-y divide-line";
-export const TR = "transition-colors hover:bg-raised/60";
+export const TR = "transition-colors duration-150 hover:bg-hover/60";
 export const TD = "px-4 py-3";
+
+/** A number that counts to its value when it appears or changes. */
+export function CountUp({
+  value,
+  format = (n) => Math.round(n).toLocaleString(),
+}: {
+  value: number;
+  format?: (n: number) => string;
+}) {
+  // Not a live region, so screen readers read the value when they reach it,
+  // never the frames in between.
+  return <>{format(useCountUp(value))}</>;
+}
 
 /** A key figure: a label above a large value, with an optional note below. */
 export function Stat({
@@ -316,9 +378,7 @@ export function Stat({
   return (
     <div>
       <dt className="text-xs text-fg-3">{label}</dt>
-      <dd className={cx("tabular mt-1 text-[22px] font-semibold tracking-[-0.02em]", valueTone)}>
-        {value}
-      </dd>
+      <dd className={cx("tabular font-display mt-1 text-2xl font-semibold tracking-[-0.02em]", valueTone)}>{value}</dd>
       {note && <dd className="mt-0.5 text-xs text-fg-3">{note}</dd>}
     </div>
   );
@@ -344,9 +404,20 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
       onClick={copy}
       aria-label={copied ? "Copied" : label}
       title={copied ? "Copied" : label}
-      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg"
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg active:scale-90"
     >
-      {copied ? <CheckIcon className="text-ok" width={14} height={14} /> : <CopyIcon width={14} height={14} />}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={copied ? "done" : "copy"}
+          initial={{ scale: 0.4, rotate: -45, opacity: 0 }}
+          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+          exit={{ scale: 0.4, rotate: 45, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 28 }}
+          className="inline-flex"
+        >
+          {copied ? <CheckIcon className="text-ok" width={14} height={14} /> : <CopyIcon width={14} height={14} />}
+        </motion.span>
+      </AnimatePresence>
     </button>
   );
 }
@@ -410,7 +481,7 @@ export function Modal({ title, open, onClose, dismissible = true, children }: Mo
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/65 px-4 py-[12vh]"
+      className="fixed inset-0 z-50 flex animate-fade items-start justify-center overflow-y-auto bg-[rgb(20_19_16/0.45)] px-4 py-[12vh]"
       onMouseDown={(event) => {
         if (dismissible && event.target === event.currentTarget) onClose();
       }}
@@ -421,10 +492,10 @@ export function Modal({ title, open, onClose, dismissible = true, children }: Mo
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="w-full max-w-lg animate-rise rounded-xl border border-line-strong bg-panel shadow-pop focus:outline-none"
+        className="w-full max-w-lg animate-rise rounded-lg border border-line-strong bg-panel shadow-pop focus:outline-none"
       >
-        <div className="flex items-center justify-between px-5 pb-1 pt-4">
-          <h2 id={titleId} className="text-[15px] font-semibold tracking-[-0.01em] text-fg">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <h2 id={titleId} className="text-lg font-semibold tracking-[-0.01em] text-fg">
             {title}
           </h2>
           {dismissible && (
@@ -438,7 +509,7 @@ export function Modal({ title, open, onClose, dismissible = true, children }: Mo
             </button>
           )}
         </div>
-        <div className="px-5 pb-5 pt-3 text-[13px] text-fg-2">{children}</div>
+        <div className="px-5 pb-5 pt-4 text-[13px] text-fg-2">{children}</div>
       </div>
     </div>
   );

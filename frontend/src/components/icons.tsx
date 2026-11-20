@@ -160,20 +160,49 @@ export const ShieldIcon = (p: P) => (
   </Icon>
 );
 
-/** Relay's mark: a signal passing through a relay point. */
+export const SunIcon = (p: P) => (
+  <Icon {...p}>
+    <circle cx="8" cy="8" r="2.8" />
+    <path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1" />
+  </Icon>
+);
+export const MoonIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M13.5 9.6A5.6 5.6 0 0 1 6.4 2.5a5.6 5.6 0 1 0 7.1 7.1Z" />
+  </Icon>
+);
+export const SystemIcon = (p: P) => (
+  <Icon {...p}>
+    <rect x="1.8" y="2.8" width="12.4" height="8.4" rx="1.3" />
+    <path d="M5.5 13.8h5M8 11.2v2.6" />
+  </Icon>
+);
+
+/**
+ * Relay's mark, "Retry loop": a delivery arrow that loops back once (the retry)
+ * and carries on to its destination. The line takes the text colour, so it
+ * works on both themes; the start point and arrowhead are signal orange.
+ */
 export function Logo({ className = "" }: { className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" className={className}>
-      <rect width="24" height="24" rx="6" fill="var(--color-accent)" />
+    <svg aria-hidden="true" viewBox="0 0 64 64" width="28" height="28" className={className}>
       <path
-        d="M5 15.5h4.2l2.8-7 2.8 7H19"
+        d="M8 40 H 26 C 40 40 42 18 30 18 C 18 18 20 40 34 40 H 52"
         fill="none"
-        stroke="white"
-        strokeWidth="2"
+        stroke="currentColor"
+        strokeWidth="5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="12" cy="8.5" r="1.6" fill="white" />
+      <path
+        d="M45 33 L53 40 L45 47"
+        fill="none"
+        stroke="var(--color-accent)"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="8" cy="40" r="5" fill="var(--color-accent)" />
     </svg>
   );
 }

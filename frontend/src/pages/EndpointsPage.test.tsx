@@ -92,7 +92,7 @@ describe("EndpointsPage", () => {
     renderPage(<EndpointsPage />, { role: "viewer" });
 
     await screen.findByText("https://hooks.example.com/orders");
-    for (const name of ["Add endpoint", "Edit", "Pause", "Rotate secret", "Delete"]) {
+    for (const name of ["Add endpoint", "Edit", "Pause", "Rotate secret", "Delete", /More actions/]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
   });
@@ -166,6 +166,9 @@ describe("EndpointsPage", () => {
     renderPage(<EndpointsPage />);
     await screen.findByText("https://hooks.example.com/orders");
 
+    // Delete lives in the "More" menu, away from the everyday actions.
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /More actions/ }));
     await user.click(screen.getByRole("button", { name: "Delete" }));
     const dialog = screen.getByRole("dialog", { name: "Delete this endpoint?" });
     expect(calls.some((call) => call.method === "DELETE")).toBe(false);
