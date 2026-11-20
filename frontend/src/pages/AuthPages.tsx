@@ -3,6 +3,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SESSION_QUERY_KEY } from "../auth/AuthProvider";
 import { DispatchBackdrop } from "../components/DispatchBackdrop";
+import { ThemeButton } from "../components/Layout";
 import { ProductStory } from "../components/ProductStory";
 import { Logo } from "../components/icons";
 import { Button, ErrorState, Field, Input, LoadingState } from "../components/ui";
@@ -32,19 +33,22 @@ export function AuthShell({
     <div className="relative isolate min-h-screen overflow-hidden">
       <DispatchBackdrop />
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-5 py-6 sm:px-8">
-        <Link to="/login" className="flex w-fit items-center gap-2.5 rounded-md">
-          <Logo className="h-7 w-7" />
-          <span className="font-display text-xl font-semibold tracking-[-0.03em]">Relay</span>
-        </Link>
+        <div className="flex items-center justify-between gap-4">
+          <Link to="/login" className="flex w-fit items-center gap-2.5 rounded-md">
+            <Logo className="h-7 w-7" />
+            <span className="font-display text-xl font-semibold tracking-[-0.03em]">Relay</span>
+          </Link>
+          <ThemeButton />
+        </div>
 
         {/* Wide screens: the story on the left, the form on the right. On a phone
             the form comes first, then what Relay is. */}
         <div className="grid flex-1 grid-cols-[minmax(0,1fr)] items-center gap-10 py-8 min-[1100px]:grid-cols-[minmax(0,1.15fr)_400px] min-[1100px]:gap-16">
-          <div className="relative isolate order-2 min-w-0 before:pointer-events-none before:absolute before:-inset-x-16 before:-inset-y-12 before:-z-10 before:bg-[radial-gradient(closest-side,var(--color-canvas)_70%,transparent)] before:content-[''] min-[1100px]:order-1">
+          <div className="relative isolate order-2 min-w-0 before:pointer-events-none before:absolute before:-inset-x-8 before:-inset-y-6 before:-z-10 before:rounded-[48px] before:bg-canvas before:blur-2xl before:content-[''] min-[1100px]:order-1">
             <ProductStory />
           </div>
 
-          <div className="relative isolate order-1 w-full max-w-[400px] before:pointer-events-none before:absolute before:-inset-x-16 before:-inset-y-12 before:-z-10 before:bg-[radial-gradient(closest-side,var(--color-canvas)_70%,transparent)] before:content-[''] animate-rise justify-self-center min-[1100px]:order-2">
+          <div className="relative isolate order-1 w-full max-w-[400px] before:pointer-events-none before:absolute before:-inset-x-8 before:-inset-y-6 before:-z-10 before:rounded-[48px] before:bg-canvas before:blur-2xl before:content-[''] animate-rise justify-self-center min-[1100px]:order-2">
             <div className="rounded-xl border border-line-strong bg-panel shadow-pop">
               <div className="px-7 pb-7 pt-6">
                 <h1 className="mb-6 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>

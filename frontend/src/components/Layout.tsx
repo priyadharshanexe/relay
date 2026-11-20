@@ -23,7 +23,7 @@ const TABS: { to: string; label: string }[][] = [
   ],
 ];
 
-function ThemeButton() {
+export function ThemeButton() {
   const [theme, toggle] = useTheme();
   const other = theme === "dark" ? "light" : "dark";
   const Icon = theme === "dark" ? MoonIcon : SunIcon;
