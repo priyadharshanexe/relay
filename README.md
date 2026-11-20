@@ -28,8 +28,6 @@ Your app sends Relay an event with one HTTP call. Relay stores it, signs it and 
 - [Observability](#observability)
 - [Load test](#load-test)
 - [Security](#security)
-- [Decision records](#decision-records)
-- [What's next](#whats-next)
 - [Project layout](#project-layout)
 - [Licence](#licence)
 
@@ -134,7 +132,7 @@ sequenceDiagram
 | Guarantee | What it means | Where it is enforced |
 |---|---|---|
 | **At-least-once delivery** | An accepted event is delivered to each subscribed endpoint at least once. A receiver can see the same message twice (for example, if a worker crashes after sending but before recording the result), so receivers should drop duplicates by `webhook-id`. | [claim.py](relay/worker/claim.py) (leases and sweep); load test: 8,286 in, 8,286 delivered once |
-| **No ordering guarantee** | Deliveries for different events can arrive in any order, and a retry can arrive after a later event. Use the event's timestamp or your own sequence numbers if order matters. | by design: workers send in parallel and retry independently (decision record 0003, planned) |
+| **No ordering guarantee** | Deliveries for different events can arrive in any order, and a retry can arrive after a later event. Use the event's timestamp or your own sequence numbers if order matters. | by design: workers send in parallel and retry independently |
 | **Idempotent ingestion** | The same `Idempotency-Key` returns the original event (200) instead of creating another; the same key with a different body is refused (409). | [api/events.py](relay/api/events.py) |
 | **One active claim per delivery** | Two workers never send the same delivery at the same time. | `FOR UPDATE SKIP LOCKED` plus a status check in the claim, [claim.py](relay/worker/claim.py) |
 | **Retry schedule** | 7 attempts: immediately, then 30 s, 2 min, 10 min, 1 h, 6 h and 24 h later, each ±20%. A `Retry-After` header is honoured up to 1 hour. Then the delivery is dead-lettered. Configurable with `RELAY_RETRY_SCHEDULE_SECONDS`. | [backoff.py](relay/domain/backoff.py) |
@@ -359,27 +357,6 @@ On a laptop, one API process and one worker: **about 108 events/s at p95 164 ms*
 - **Sessions.** Login sets HTTP-only cookies; cookie-authenticated writes must come from the dashboard's own origin. Login and sign-up are rate-limited per client address.
 - **Tenancy.** Every query is scoped to the caller's organisation, and roles (owner, developer, viewer) are checked on each route.
 - **Secret scanning.** gitleaks runs over the whole history in CI.
-
-## Decision records
-
-The reasoning behind the main choices is kept in [docs/decisions](docs/decisions/README.md), one file per decision. These are planned and not written yet:
-
-| # | Decision | Status |
-|---|----------|--------|
-| 0001 | Postgres as the queue, not Celery | to write |
-| 0002 | At-least-once delivery, not exactly-once | to write |
-| 0003 | No ordering guarantee between events | to write |
-| 0004 | Standard Webhooks signature format | to write |
-| 0005 | SSRF policy: blocked ranges, no redirects | to write |
-| 0006 | One VM, no Kubernetes | to write |
-
-## What's next
-
-- Deploy to one VM with Terraform, TLS through Caddy and tagged releases to GitHub Container Registry, with a public demo that resets daily (`RELAY_DEMO_MODE`).
-- Write the design document and the decision records above.
-- Measure delivery throughput on its own and with several workers, to find where one Postgres queue stops scaling.
-- Run several API processes, which needs Prometheus' multiprocess mode for the metrics.
-- Show test receivers' public address instead of the internal `http://api:8000` host in the local stack.
 
 ## Project layout
 
