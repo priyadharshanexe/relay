@@ -178,28 +178,31 @@ export const SystemIcon = (p: P) => (
   </Icon>
 );
 
-/** Relay's mark: a route through a relay point, ending in an arrow. */
+/**
+ * Relay's mark, "Retry loop": a delivery arrow that loops back once (the retry)
+ * and carries on to its destination. The line takes the text colour, so it
+ * works on both themes; the start point and arrowhead are signal orange.
+ */
 export function Logo({ className = "" }: { className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" className={className}>
-      <rect width="24" height="24" rx="5" fill="var(--color-accent)" />
+    <svg aria-hidden="true" viewBox="0 0 64 64" width="28" height="28" className={className}>
       <path
-        d="M5.5 17.5 10 12.8l3.2 2.6 5.3-7.4"
+        d="M8 40 H 26 C 40 40 42 18 30 18 C 18 18 20 40 34 40 H 52"
         fill="none"
-        stroke="var(--color-on-accent)"
-        strokeWidth="2"
+        stroke="currentColor"
+        strokeWidth="5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M14.8 7.6h3.9v3.9"
+        d="M45 33 L53 40 L45 47"
         fill="none"
-        stroke="var(--color-on-accent)"
-        strokeWidth="2"
+        stroke="var(--color-accent)"
+        strokeWidth="5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="5.5" cy="17.5" r="1.7" fill="var(--color-on-accent)" />
+      <circle cx="8" cy="40" r="5" fill="var(--color-accent)" />
     </svg>
   );
 }

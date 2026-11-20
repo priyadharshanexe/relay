@@ -40,11 +40,11 @@ export function AuthShell({
         {/* Wide screens: the story on the left, the form on the right. On a phone
             the form comes first, then what Relay is. */}
         <div className="grid flex-1 grid-cols-[minmax(0,1fr)] items-center gap-10 py-8 min-[1100px]:grid-cols-[minmax(0,1.15fr)_400px] min-[1100px]:gap-16">
-          <div className="order-2 min-w-0 min-[1100px]:order-1">
+          <div className="relative isolate order-2 min-w-0 before:pointer-events-none before:absolute before:-inset-x-16 before:-inset-y-12 before:-z-10 before:bg-[radial-gradient(closest-side,var(--color-canvas)_70%,transparent)] before:content-[''] min-[1100px]:order-1">
             <ProductStory />
           </div>
 
-          <div className="order-1 w-full max-w-[400px] animate-rise justify-self-center min-[1100px]:order-2">
+          <div className="relative isolate order-1 w-full max-w-[400px] before:pointer-events-none before:absolute before:-inset-x-16 before:-inset-y-12 before:-z-10 before:bg-[radial-gradient(closest-side,var(--color-canvas)_70%,transparent)] before:content-[''] animate-rise justify-self-center min-[1100px]:order-2">
             <div className="rounded-xl border border-line-strong bg-panel shadow-pop">
               <div className="px-7 pb-7 pt-6">
                 <h1 className="mb-6 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>

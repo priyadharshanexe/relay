@@ -113,7 +113,7 @@ function SampleTicker() {
     return { key: offset + i, sample: SAMPLES[index] ?? SAMPLES[0]! };
   });
   return (
-    <div className="mt-8 max-w-md overflow-hidden rounded-lg border border-line bg-panel/80">
+    <div className="mt-8 max-w-md overflow-hidden rounded-lg border border-line bg-panel">
       <p className="flex items-center justify-between border-b border-line px-3.5 py-2 text-2xs text-fg-3">
         <span>Sample deliveries</span>
         <span className="font-mono">example data</span>
@@ -156,7 +156,7 @@ export function ProductStory() {
       <ul className="mt-7 grid gap-x-6 gap-y-5 sm:grid-cols-2">
         {POINTS.map(({ glyph: Glyph, title, text }) => (
           <li key={title} className="flex gap-3">
-            <span className="shrink-0 self-start rounded-lg border border-line bg-panel/80 p-1">
+            <span className="shrink-0 self-start rounded-lg border border-line bg-panel p-1">
               <Glyph />
             </span>
             <span>
