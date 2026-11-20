@@ -24,6 +24,7 @@ import {
   Notice,
   PageHeader,
 } from "../components/ui";
+import { MoreMenu } from "../components/MoreMenu";
 import { useSpotlight } from "../components/motionkit";
 import { cx } from "../components/ui";
 import { useOverview } from "./OverviewPage";
@@ -276,7 +277,8 @@ function EndpointRow({
       {...spotlight}
       style={{ animationDelay: `${Math.min(order, 10) * 60}ms` }}
       className={cx(
-        "spotlight animate-rise rounded-xl border bg-panel px-5 py-5 transition-[border-color,translate] duration-200 hover:-translate-y-0.5 [animation-fill-mode:both]",
+        // A card whose More menu is open sits above its neighbours, so the menu is not covered.
+        "spotlight animate-rise rounded-xl border bg-panel px-5 py-5 transition-[border-color,translate] duration-200 hover:-translate-y-0.5 has-[[aria-expanded=true]]:z-10 [animation-fill-mode:both]",
         endpoint.breaker_state === "open" ? "border-bad/40" : "border-line",
       )}
     >
@@ -361,12 +363,15 @@ function EndpointRow({
               Resume
             </Button>
           )}
-          <Button size="sm" variant="ghost" onClick={() => setConfirm("rotate-secret")}>
-            Rotate secret
-          </Button>
-          <Button size="sm" variant="ghost" className="ml-auto hover:text-bad" onClick={() => setConfirm("delete")}>
-            Delete
-          </Button>
+          <div className="ml-auto">
+            <MoreMenu
+              label={`More actions for ${endpoint.description || endpoint.url}`}
+              actions={[
+                { label: "Rotate secret", onSelect: () => setConfirm("rotate-secret") },
+                { label: "Delete", onSelect: () => setConfirm("delete"), danger: true },
+              ]}
+            />
+          </div>
         </div>
       )}
       {notice && (

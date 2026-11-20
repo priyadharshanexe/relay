@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { DeliveryTable, STATUS_OPTIONS, useEndpoints } from "../components/delivery";
 import {
@@ -218,6 +218,7 @@ function DeliveryList({
   emptyTitle,
   emptyText,
   emptyIcon,
+  emptyAction,
 }: {
   filters: Filters;
   active: boolean;
@@ -225,6 +226,7 @@ function DeliveryList({
   emptyTitle: string;
   emptyText: string;
   emptyIcon?: React.ReactNode;
+  emptyAction?: React.ReactNode;
 }) {
   const query = useDeliveries(filters);
   const deliveries = query.data?.pages.flatMap((page) => page.items) ?? [];
@@ -237,7 +239,7 @@ function DeliveryList({
         Try a wider time range or a different status.
       </EmptyState>
     ) : (
-      <EmptyState title={emptyTitle} icon={emptyIcon}>
+      <EmptyState title={emptyTitle} icon={emptyIcon} action={emptyAction}>
         {emptyText}
       </EmptyState>
     );
@@ -276,6 +278,11 @@ export function DeliveriesPage() {
         emptyTitle="No deliveries yet"
         emptyText="Deliveries appear here as soon as you send an event that an endpoint subscribes to."
         emptyIcon={<DeliveriesIcon />}
+        emptyAction={
+          <Link to="/endpoints" className="text-[13px] font-medium text-accent hover:text-accent-hover">
+            Send a test event from Endpoints →
+          </Link>
+        }
       />
     </>
   );

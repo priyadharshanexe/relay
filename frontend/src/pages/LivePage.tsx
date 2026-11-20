@@ -126,7 +126,15 @@ export function LivePage() {
       <Throughput updates={updates} />
 
       {updates.length === 0 ? (
-        <EmptyState title="Waiting for deliveries…" icon={<LiveIcon />}>
+        <EmptyState
+          title="Waiting for deliveries…"
+          icon={<LiveIcon />}
+          action={
+            <Link to="/endpoints" className="text-[13px] font-medium text-accent hover:text-accent-hover">
+              Send a test event from Endpoints →
+            </Link>
+          }
+        >
           Send an event, or use "Send test event" on an endpoint, and it will show up here within a
           moment.
         </EmptyState>

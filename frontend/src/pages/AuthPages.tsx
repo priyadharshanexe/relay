@@ -3,6 +3,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SESSION_QUERY_KEY } from "../auth/AuthProvider";
 import { DispatchBackdrop } from "../components/DispatchBackdrop";
+import { ProductStory } from "../components/ProductStory";
 import { Logo } from "../components/icons";
 import { Button, ErrorState, Field, Input, LoadingState } from "../components/ui";
 import { api, fieldErrors, setCurrentOrgId } from "../lib/api";
@@ -18,14 +19,6 @@ import {
 
 const LINK = "font-medium text-accent transition-colors hover:text-accent-hover";
 
-/** The three promises Relay makes, printed under the sign-in form like the
- *  tear-off strip of a dispatch slip. */
-const SLIP: [string, string][] = [
-  ["Signed", "HMAC-SHA256"],
-  ["Retried", "7 attempts"],
-  ["Kept", "replayable"],
-];
-
 export function AuthShell({
   title,
   children,
@@ -36,33 +29,31 @@ export function AuthShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="relative isolate flex min-h-screen flex-col items-center overflow-hidden px-5 py-10 sm:py-16">
+    <div className="relative isolate min-h-screen overflow-hidden">
       <DispatchBackdrop />
-      <Link to="/login" className="relative mb-10 flex items-center gap-2.5 rounded-md">
-        <Logo className="h-7 w-7" />
-        <span className="font-display text-xl font-semibold tracking-[-0.03em]">Relay</span>
-      </Link>
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col px-5 py-6 sm:px-8">
+        <Link to="/login" className="flex w-fit items-center gap-2.5 rounded-md">
+          <Logo className="h-7 w-7" />
+          <span className="font-display text-xl font-semibold tracking-[-0.03em]">Relay</span>
+        </Link>
 
-      <div className="relative w-full max-w-[400px] animate-rise">
-        <div className="rounded-xl border border-line-strong bg-panel shadow-pop">
-          <div className="px-7 pb-7 pt-6">
-            <h1 className="mb-6 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>
-            {children}
+        {/* Wide screens: the story on the left, the form on the right. On a phone
+            the form comes first, then what Relay is. */}
+        <div className="grid flex-1 grid-cols-[minmax(0,1fr)] items-center gap-10 py-8 min-[1100px]:grid-cols-[minmax(0,1.15fr)_400px] min-[1100px]:gap-16">
+          <div className="order-2 min-w-0 min-[1100px]:order-1">
+            <ProductStory />
           </div>
-          {/* The tear-off strip: a perforated rule, then the facts in mono. */}
-          <dl
-            aria-label="What Relay does"
-            className="grid grid-cols-3 border-t border-dashed border-line-strong bg-sunken/40 px-4 py-3 font-mono text-2xs"
-          >
-            {SLIP.map(([term, detail]) => (
-              <div key={term} className="px-1.5">
-                <dt className="font-medium text-fg">{term}</dt>
-                <dd className="text-fg-3">{detail}</dd>
+
+          <div className="order-1 w-full max-w-[400px] animate-rise justify-self-center min-[1100px]:order-2">
+            <div className="rounded-xl border border-line-strong bg-panel shadow-pop">
+              <div className="px-7 pb-7 pt-6">
+                <h1 className="mb-6 text-2xl font-semibold tracking-[-0.03em] text-fg">{title}</h1>
+                {children}
               </div>
-            ))}
-          </dl>
+            </div>
+            {footer && <p className="mt-5 text-center text-[13px] text-fg-2">{footer}</p>}
+          </div>
         </div>
-        {footer && <p className="mt-6 text-center text-[13px] text-fg-2">{footer}</p>}
       </div>
     </div>
   );

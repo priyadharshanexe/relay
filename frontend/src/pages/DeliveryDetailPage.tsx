@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { JsonView } from "../components/JsonView";
 import { Tracker } from "../components/Tracker";
@@ -213,6 +213,7 @@ function Fact({ label, children, mono = false }: { label: string; children: Reac
 
 export function DeliveryDetailPage() {
   const { id = "" } = useParams();
+  const location = useLocation();
   const { canEdit } = useAuth();
   const queryClient = useQueryClient();
 
@@ -237,14 +238,16 @@ export function DeliveryDetailPage() {
     },
   });
 
+  // Back to the list you came from: the dead-letter queue, or all deliveries.
+  const fromDeadLetter = (location.state as { from?: string } | null)?.from === "/dead-letter";
   const back = (
     <Link
-      to="/deliveries"
+      to={fromDeadLetter ? "/dead-letter" : "/deliveries"}
       viewTransition
       className="inline-flex items-center gap-1.5 text-xs font-medium text-fg-3 transition-colors hover:text-fg"
     >
       <ArrowLeftIcon width={13} height={13} />
-      All deliveries
+      {fromDeadLetter ? "Dead-letter queue" : "All deliveries"}
     </Link>
   );
 
