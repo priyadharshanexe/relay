@@ -168,7 +168,7 @@ function MembersCard() {
         </div>
       )}
       {members.data && (
-        <Card className="overflow-x-auto">
+        <Card className="relative overflow-x-auto">
           <table className="min-w-full text-[13px]">
             <thead className="border-b border-line text-left text-xs text-fg-3">
               <tr>
@@ -346,7 +346,7 @@ function InvitationsCard() {
         </Card>
       )}
       {invitations.data && invitations.data.length > 0 && (
-        <Card className="overflow-x-auto">
+        <Card className="relative overflow-x-auto">
           <table className="min-w-full text-[13px]">
             <thead className="border-b border-line text-left text-xs text-fg-3">
               <tr>

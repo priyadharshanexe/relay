@@ -255,7 +255,7 @@ export function Sparkline({
   const totals = succeeded.map((value, index) => value + (failed[index] ?? 0));
   const max = Math.max(...totals, 1);
   return (
-    <div role="img" aria-label={label} className="flex h-7 w-36 items-end gap-px">
+    <div role="img" aria-label={label} className="flex h-7 w-36 items-end gap-px max-sm:w-24">
       {totals.map((total, index) => (
         <div
           key={index}

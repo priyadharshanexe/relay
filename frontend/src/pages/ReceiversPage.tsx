@@ -285,7 +285,7 @@ export function ReceiversPage() {
         </EmptyState>
       )}
       {receivers.data && receivers.data.length > 0 && (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
             {receivers.data.map((receiver, index) => (
               <ReceiverRow
                 key={receiver.id}

@@ -318,7 +318,7 @@ function EndpointRow({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-6">
+        <div className="flex shrink-0 items-center gap-6 max-sm:w-full max-sm:justify-between max-sm:gap-4">
           {series && (
             <Sparkline
               succeeded={series.succeeded}
@@ -463,7 +463,7 @@ export function EndpointsPage() {
         </EmptyState>
       )}
       {endpoints.data && endpoints.data.length > 0 && (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
             {endpoints.data.map((endpoint, index) => (
               <EndpointRow
                 key={endpoint.id}

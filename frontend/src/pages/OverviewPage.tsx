@@ -552,7 +552,7 @@ export function OverviewPage() {
                 >
                   Endpoints by activity
                 </SectionTitle>
-                <Stagger as="ul" className="grid gap-3">
+                <Stagger as="ul" className="grid grid-cols-[minmax(0,1fr)] gap-3">
                   {ranked.map((series) => {
                     const endpoint = endpointOf.get(series.endpoint_id);
                     const url = endpoint?.url ?? "(deleted endpoint)";
@@ -595,7 +595,7 @@ function EndpointRow({
       {...spotlight}
       whileHover={{ y: -2 }}
       transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      className="spotlight flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-line bg-panel px-5 py-4"
+      className="spotlight flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-line bg-panel px-5 py-4 max-sm:gap-x-4"
     >
       {/* On a phone the name takes the whole first line; the numbers follow. */}
       <div className="min-w-0 flex-1 max-sm:basis-full">

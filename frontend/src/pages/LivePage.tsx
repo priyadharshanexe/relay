@@ -150,7 +150,7 @@ export function LivePage() {
               </>
             )}
           </p>
-          <Card className="overflow-x-auto">
+          <Card className="relative overflow-x-auto">
             <table className={TABLE}>
               <thead className={THEAD}>
                 <tr>
