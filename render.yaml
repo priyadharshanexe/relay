@@ -1,0 +1,39 @@
+# Render Blueprint: the public Relay demo on Render's free tier.
+# Postgres comes from Neon and Redis from Upstash (both free, no card); paste
+# their connection strings when Render asks for the values marked sync: false.
+services:
+  - type: web
+    name: relay
+    runtime: docker
+    plan: free
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: RELAY_ENVIRONMENT
+        value: production
+      - key: RELAY_DATABASE_URL     # postgresql+asyncpg://USER:PASSWORD@HOST/DB?ssl=require (Neon)
+        sync: false
+      - key: RELAY_REDIS_URL        # rediss://default:PASSWORD@HOST:6379 (Upstash)
+        sync: false
+      - key: RELAY_JWT_SECRET
+        generateValue: true
+      - key: RELAY_ENCRYPTION_KEY   # base64 of 32 random bytes
+        sync: false
+      - key: RELAY_DATABASE_POOL_SIZE
+        value: "3"
+      - key: RELAY_RECEIVER_BASE_URL
+        value: http://127.0.0.1:8001
+      - key: RELAY_DELIVERY_ONLY_TO_RECEIVER
+        value: "true"
+      - key: RELAY_DEMO_MODE
+        value: "true"
+      - key: RELAY_WORKER_METRICS_PORT
+        value: "0"
+      - key: RELAY_WORKER_CONCURRENCY
+        value: "5"
+      - key: RELAY_RETRY_SCHEDULE_SECONDS
+        value: "[0, 5, 15, 60]"
+      - key: RELAY_LOG_JSON
+        value: "true"
