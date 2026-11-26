@@ -6,6 +6,7 @@ services:
     name: relay
     runtime: docker
     plan: free
+    region: singapore
     dockerfilePath: ./deploy/render/Dockerfile
     dockerContext: .
     healthCheckPath: /healthz
