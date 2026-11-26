@@ -24,6 +24,8 @@ services:
         sync: false
       - key: RELAY_DATABASE_POOL_SIZE
         value: "3"
+      - key: RELAY_ALLOWED_ORIGINS    # the browser origin the dashboard is served from
+        value: '["https://relay-3y3s.onrender.com"]'
       - key: RELAY_RECEIVER_BASE_URL
         value: http://127.0.0.1:8001
       - key: RELAY_DELIVERY_ONLY_TO_RECEIVER
