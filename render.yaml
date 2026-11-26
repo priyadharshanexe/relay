@@ -26,12 +26,14 @@ services:
         value: "3"
       - key: RELAY_ALLOWED_ORIGINS    # the browser origin the dashboard is served from
         value: '["https://relay-3y3s.onrender.com"]'
-      - key: RELAY_RECEIVER_BASE_URL
-        value: http://127.0.0.1:8001
+      - key: RELAY_RECEIVER_BASE_URL  # public, so test-receiver URLs on the dashboard are real addresses
+        value: https://relay-3y3s.onrender.com
       - key: RELAY_DELIVERY_ONLY_TO_RECEIVER
         value: "true"
       - key: RELAY_DEMO_MODE
         value: "true"
+      - key: RELAY_DEMO_RESET_HOUR_UTC  # 22:30 IST, after the hours the demo is kept awake
+        value: "17"
       - key: RELAY_WORKER_METRICS_PORT
         value: "0"
       - key: RELAY_WORKER_CONCURRENCY
