@@ -11,6 +11,12 @@ Reliable, signed webhook delivery: a transactional outbox, retries with backoff,
 
 Your app sends Relay an event with one HTTP call. Relay stores it, signs it and delivers it to every endpoint your customers have registered. If an endpoint is down, Relay retries on a schedule, stops hammering it with a circuit breaker, and keeps what still fails in a dead-letter queue until you replay it.
 
+**Live demo:** [relay-3y3s.onrender.com](https://relay-3y3s.onrender.com) (public demo account, details on the sign-in page)
+
+## Watch the 3-minute demo
+
+<!-- Drag relay-demo.mp4 here in GitHub's editor -->
+
 ![The delivery map on the Overview](docs/images/delivery-map.gif)
 
 > **Status:** under active development. The backend, the dashboard, metrics, alerts, tracing and a load test are done. Deployment is next.
