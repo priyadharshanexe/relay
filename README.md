@@ -15,7 +15,11 @@ Your app sends Relay an event with one HTTP call. Relay stores it, signs it and 
 
 ## Watch the 3-minute demo
 
-<!-- Drag relay-demo.mp4 here in GitHub's editor -->
+
+
+https://github.com/user-attachments/assets/210d8f91-fea9-472b-aa06-d9f3f394cdb4
+
+
 
 ![The delivery map on the Overview](docs/images/delivery-map.gif)
 
