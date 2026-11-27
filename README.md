@@ -13,20 +13,19 @@ Your app sends Relay an event with one HTTP call. Relay stores it, signs it and 
 
 **Live demo:** [relay-3y3s.onrender.com](https://relay-3y3s.onrender.com) (public demo account, details on the sign-in page)
 
-## Watch the 3-minute demo
-
-
+## Watch the demo
 
 https://github.com/user-attachments/assets/210d8f91-fea9-472b-aa06-d9f3f394cdb4
 
-
+## The delivery map
 
 ![The delivery map on the Overview](docs/images/delivery-map.gif)
 
-> **Status:** under active development. The backend, the dashboard, metrics, alerts, tracing and a load test are done. Deployment is next.
+<sub>Every delivery travels as a packet from your app, through Relay, to each endpoint.</sub>
 
 ## Contents
 
+- [Watch the demo](#watch-the-demo)
 - [Features](#features)
 - [Architecture](#architecture)
 - [The life of one delivery](#the-life-of-one-delivery)
